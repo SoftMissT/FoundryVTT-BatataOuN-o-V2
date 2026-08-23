@@ -4,6 +4,9 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -13,10 +16,9 @@ jobs:
       - name: Create module.zip
         run: zip -r ./module.zip module.json LICENSE styles/ scripts/ templates/ languages/
 
-      - name: Upload module.zip to release
-        uses: ncipollo/release-action@v1
-        with:
-          allowUpdates: true
-          tag: ${{ github.event.release.tag_name }}
-          artifacts: "./module.zip"
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload assets to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ github.event.release.tag_name }} ./module.zip --clobber
+          gh release upload ${{ github.event.release.tag_name }} ./module.json --clobber
