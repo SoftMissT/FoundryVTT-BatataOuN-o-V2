@@ -1,1 +1,57 @@
-module.zip
+# Batata Ou Nao — Foundry VTT module
+# Regra: artefatos gerados nao entram no Git.
+# O GitHub Release publica module.zip/module.json como assets.
+
+# Release/build artifacts
+/module.zip
+/*.zip
+/dist/
+/build/
+/coverage/
+
+# Node/tooling
+/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Logs / temp
+*.log
+*.tmp
+*.temp
+.cache/
+.temp/
+tmp/
+
+# Foundry local/dev runtime noise
+foundrydata/
+FoundryVTT/
+Data/
+Config/
+Logs/
+
+# Do NOT ignore these:
+# module.json
+# README.md
+# LICENSE
+# scripts/
+# styles/
+# templates/
+# languages/
+# docs/
+# AGENTS.md
