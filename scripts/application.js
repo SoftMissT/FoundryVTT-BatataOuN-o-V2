@@ -1,31 +1,21 @@
 /**
- * ApplicationV2 — Diálogo integrado com benchmark, qualidade e controles granulares.
+ * ApplicationV2 — Diálogo integrado.
  * @module application
  */
 
-import {
-  getCurrentQuality,
-  applyQuality,
-  QUALITY_LABELS,
-} from "./quality.js";
+import { getCurrentQuality, applyQuality, QUALITY_LABELS } from "./quality.js";
 import { getSetting, setSetting, SETTING_KEYS } from "./settings.js";
 import { runBenchmark, detectGPU } from "./benchmark.js";
-import {
-  getGranularState,
-  toggleGranularFeature,
-  resetGranular,
-} from "./granular.js";
+import { getGranularState, toggleGranularFeature, resetGranular } from "./granular.js";
 import { startMonitor, stopMonitor, getMonitorState } from "./monitor.js";
 
-/**
- * Diálogo de configuração de performance.
- * ApplicationV2 + HandlebarsApplicationMixin.
- */
 export class PotatoDialog extends foundry.applications.api.HandlebarsApplicationMixin(
   foundry.applications.api.ApplicationV2
 ) {
   static DEFAULT_OPTIONS = {
     id: "batata-ou-nao-dialog",
+    width: 680,
+    height: "auto",
     window: {
       contentClasses: ["standard-form"],
       icon: "fas fa-microchip",
@@ -52,64 +42,67 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
   async _prepareContext() {
     const gpu = detectGPU();
     const monitor = getMonitorState();
-    const granular = getGranularState();
+    const granular = this.#buildGranularContext();
+
+    const benchmark = this.#benchmarkResult
+      ? {
+          ...this.#benchmarkResult,
+          recommendedLabel: game.i18n.localize(
+            QUALITY_LABELS[this.#benchmarkResult.tier]
+          ),
+        }
+      : null;
 
     return {
-      potatoQuality: getCurrentQuality(),
       selectedLevel: this.#selectedLevel,
-      qualityLabels: QUALITY_LABELS,
-      benchmark: this.#benchmarkResult,
+      gpu: gpu.renderer,
+      benchmark,
       benchmarkRunning: this.#benchmarkRunning,
-      gpu,
-      monitor,
       granular,
+      monitorActive: monitor.active,
+      monitorCurrentFps: monitor.currentFps,
+      monitorAvgFps: monitor.avgFps,
     };
   }
 
   async _onRender(context, options) {
     await super._onRender(context, options);
 
-    // Bind clicks nos cards
-    const containers = this.element.querySelectorAll(".potato-card");
-    for (const el of containers) {
-      el.addEventListener("click", (event) => {
-        event.preventDefault();
-        containers.forEach((c) => c.removeAttribute("active"));
+    // Cards de nível
+    this.element.querySelectorAll(".batata-card").forEach((el) => {
+      el.addEventListener("click", (e) => {
+        e.preventDefault();
+        this.element.querySelectorAll(".batata-card").forEach((c) =>
+          c.removeAttribute("active")
+        );
         el.setAttribute("active", "true");
         this.#selectedLevel = Number(el.dataset.level);
       });
-    }
+    });
 
-    // Bind benchmark button
+    // Benchmark button
     const benchBtn = this.element.querySelector("#batata-benchmark-btn");
     if (benchBtn) {
-      benchBtn.addEventListener("click", (e) => {
+      benchBtn.addEventListener("click", async (e) => {
         e.preventDefault();
-        this.#runBenchmark();
+        e.stopPropagation();
+        await this.#runBenchmark();
       });
     }
 
-    // Bind granular toggles
-    const toggles = this.element.querySelectorAll("[data-granular-toggle]");
-    for (const toggle of toggles) {
-      toggle.addEventListener("click", (e) => {
+    // Granular toggles
+    this.element.querySelectorAll("[data-feature]").forEach((el) => {
+      el.addEventListener("change", (e) => {
         e.preventDefault();
-        toggleGranularFeature(toggle.dataset.granularToggle);
-        this.render();
+        const id = el.dataset.feature;
+        if (el.type === "checkbox") {
+          toggleGranularFeature(id);
+        } else {
+          toggleGranularFeature(id);
+        }
       });
-    }
+    });
 
-    // Bind reset button
-    const resetBtn = this.element.querySelector("#batata-reset-btn");
-    if (resetBtn) {
-      resetBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        resetGranular(this.#selectedLevel);
-        this.render();
-      });
-    }
-
-    // Fechar settings sheet se aberto
     game.settings.sheet?.close();
   }
 
@@ -118,24 +111,37 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
     this.render();
 
     this.#benchmarkResult = await runBenchmark(3000);
-
-    // Auto-selecionar nível baseado no benchmark
     this.#selectedLevel = this.#benchmarkResult.tier;
-
     this.#benchmarkRunning = false;
     this.render();
+  }
 
-    Hooks.call("BatataOuNaoBenchmarkComplete", this.#benchmarkResult);
+  #buildGranularContext() {
+    const state = getGranularState();
+    return state.map((f) => ({
+      id: f.id,
+      name: game.i18n.localize(f.name),
+      enabled: f.enabled,
+      impact: f.impact,
+      impactLabel: game.i18n.localize(`BATATAOU_NAO.Impact.${f.impact}`),
+      isSelect: f.type === "select",
+      currentValue: f.currentValue,
+      options: f.options
+        ? f.options.map((o) => ({
+            value: o.value,
+            label: game.i18n.localize(o.label),
+            selected: f.currentValue === o.value,
+          }))
+        : [],
+    }));
   }
 
   static async #onFormSubmit(event, form, formData) {
-    const active = form.querySelector(".potato-card[active]");
+    const active = form.querySelector(".batata-card[active]");
     if (!active) return;
 
     const level = Number(active.dataset.level);
     await applyQuality(level);
     await setSetting(SETTING_KEYS.HAS_BEEN_PROMPTED, true);
-
-    Hooks.call("BatataOuNaoQualityApplied", level);
   }
 }

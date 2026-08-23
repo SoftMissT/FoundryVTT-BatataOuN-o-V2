@@ -1,20 +1,20 @@
-/* ─── Batata Ou Nao — Estilos ─────────────────────────── */
+/* ─── Batata Ou Nao ──────────────────────────────────── */
 
 .batata-dialog {
   text-align: center;
 }
 
 .batata-dialog h1 {
-  font-size: 1.4em;
-  margin-bottom: 8px;
+  font-size: 1.6em;
+  margin-bottom: 10px;
 }
 
-/* ── GPU Info ──────────────────────────────────────── */
+/* ── GPU ────────────────────────────────────────────── */
 
 .batata-gpu-info {
-  font-size: 0.8em;
+  font-size: 0.85em;
   color: #999;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .batata-gpu-value {
@@ -22,18 +22,18 @@
   font-weight: bold;
 }
 
-/* ── Benchmark ─────────────────────────────────────── */
+/* ── Benchmark ──────────────────────────────────────── */
 
 .batata-benchmark-result {
   background: rgba(255, 215, 0, 0.08);
   border: 1px solid rgba(255, 215, 0, 0.3);
-  border-radius: 6px;
-  padding: 10px;
-  margin-bottom: 10px;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
 }
 
 .batata-score {
-  font-size: 2em;
+  font-size: 2.2em;
   font-weight: bold;
   color: #FFD700;
 }
@@ -44,30 +44,31 @@
 }
 
 .batata-fps {
-  font-size: 0.9em;
+  font-size: 0.95em;
   color: #ccc;
 }
 
 .batata-tier {
-  font-size: 0.85em;
+  font-size: 0.9em;
   color: #FFD700;
   margin-top: 4px;
 }
 
 .batata-bench-btn {
   width: 100%;
-  margin-bottom: 12px;
-  padding: 8px;
+  margin-bottom: 14px;
+  padding: 10px;
   background: rgba(255, 215, 0, 0.1);
   border: 1px solid rgba(255, 215, 0, 0.4);
   color: #FFD700;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
+  font-size: 1em;
   transition: background 0.2s;
 }
 
 .batata-bench-btn:hover {
-  background: rgba(255, 215, 0, 0.2);
+  background: rgba(255, 215, 0, 0.25);
 }
 
 .batata-bench-btn:disabled {
@@ -75,106 +76,107 @@
   cursor: wait;
 }
 
-/* ── Quality Cards ─────────────────────────────────── */
+/* ── Cards ──────────────────────────────────────────── */
 
 .batata-cards {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   justify-content: center;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .batata-card {
   flex: 1;
   border: 2px solid #555;
-  border-radius: 6px;
-  padding: 8px;
+  border-radius: 8px;
+  padding: 10px;
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s;
+  user-select: none;
 }
 
 .batata-card:hover {
-  border-color: #888;
+  border-color: #999;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .batata-card[active="true"],
 .batata-card.active {
   border-color: #FFD700;
   background: rgba(255, 215, 0, 0.1);
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.15);
+}
+
+.batata-card-img {
+  width: 100%;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .batata-card-img img {
   max-width: 100%;
-  height: 60px;
+  max-height: 140px;
   object-fit: contain;
   border-radius: 4px;
 }
 
 .batata-card-text h2 {
-  font-size: 0.95em;
+  font-size: 1.05em;
   margin: 4px 0 2px;
 }
 
 .batata-card-text p {
-  font-size: 0.75em;
+  font-size: 0.8em;
   color: #999;
   margin: 0;
+  line-height: 1.3;
 }
 
-/* ── Granular Controls ─────────────────────────────── */
+/* ── Granular ───────────────────────────────────────── */
 
 .batata-granular {
   text-align: left;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .batata-granular h3 {
   font-size: 1em;
   margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.batata-reset-btn {
-  margin-left: auto;
-  background: none;
-  border: none;
-  color: #999;
-  cursor: pointer;
-  padding: 2px 6px;
-  font-size: 0.85em;
-}
-
-.batata-reset-btn:hover {
-  color: #FFD700;
 }
 
 .batata-granular-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 0;
+  gap: 10px;
+  padding: 5px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .batata-granular-label {
   flex: 1;
-  font-size: 0.85em;
+  font-size: 0.9em;
 }
 
 .batata-granular-select {
-  width: 80px;
-  font-size: 0.8em;
+  width: 90px;
+  font-size: 0.85em;
+  padding: 2px 4px;
 }
 
-/* ── Toggle Switch ─────────────────────────────────── */
+/* ── Switch ─────────────────────────────────────────── */
 
 .batata-switch {
   position: relative;
   display: inline-block;
-  width: 36px;
-  height: 20px;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
 }
 
 .batata-switch input {
@@ -188,15 +190,15 @@
   cursor: pointer;
   inset: 0;
   background: #555;
-  border-radius: 20px;
+  border-radius: 22px;
   transition: 0.3s;
 }
 
 .batata-slider::before {
   content: "";
   position: absolute;
-  height: 14px;
-  width: 14px;
+  height: 16px;
+  width: 16px;
   left: 3px;
   bottom: 3px;
   background: white;
@@ -209,17 +211,18 @@
 }
 
 .batata-switch input:checked + .batata-slider::before {
-  transform: translateX(16px);
+  transform: translateX(18px);
 }
 
-/* ── Impact Badge ──────────────────────────────────── */
+/* ── Impact ─────────────────────────────────────────── */
 
 .batata-impact {
   font-size: 0.7em;
-  padding: 1px 5px;
-  border-radius: 3px;
+  padding: 2px 6px;
+  border-radius: 4px;
   font-weight: bold;
   text-transform: uppercase;
+  flex-shrink: 0;
 }
 
 .batata-impact-high {
@@ -237,11 +240,11 @@
   color: #2EFF7A;
 }
 
-/* ── Monitor ───────────────────────────────────────── */
+/* ── Monitor ────────────────────────────────────────── */
 
 .batata-monitor {
   text-align: left;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .batata-monitor h3 {
@@ -251,7 +254,7 @@
 
 .batata-monitor-stats {
   display: flex;
-  gap: 16px;
+  gap: 20px;
 }
 
 .batata-stat {
@@ -260,12 +263,12 @@
 }
 
 .batata-stat-value {
-  font-size: 1.4em;
+  font-size: 1.6em;
   font-weight: bold;
   color: #FFD700;
 }
 
 .batata-stat-label {
-  font-size: 0.75em;
+  font-size: 0.8em;
   color: #999;
 }

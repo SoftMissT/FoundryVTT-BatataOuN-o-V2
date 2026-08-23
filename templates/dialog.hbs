@@ -2,34 +2,31 @@
 
   <h1>{{ localize "BATATAOU_NAO.Dialog.Title" }}</h1>
 
-  {{! ── GPU Info ─────────────────────────────────────── }}
   <div class="batata-gpu-info">
     <span class="batata-gpu-label">{{ localize "BATATAOU_NAO.Dialog.GPU" }}:</span>
-    <span class="batata-gpu-value">{{ gpu.renderer }}</span>
+    <span class="batata-gpu-value">{{ gpu }}</span>
   </div>
 
-  {{! ── Benchmark ────────────────────────────────────── }}
   {{#if benchmark}}
   <div class="batata-benchmark-result">
     <div class="batata-score">
       <span class="batata-score-value">{{ benchmark.score }}</span>
       <span class="batata-score-label">/100</span>
     </div>
-    <div class="batata-fps">{{ benchmark.fps }} FPS médio</div>
-    <div class="batata-tier">{{ localize "BATATAOU_NAO.Dialog.Recommended" }}: {{ localize (get qualityLabels benchmark.tier) }}</div>
+    <div class="batata-fps">{{ benchmark.fps }} FPS</div>
+    <div class="batata-tier">{{ benchmark.recommendedLabel }}</div>
   </div>
   {{/if}}
 
-  <button type="button" id="batata-benchmark-btn" class="batata-bench-btn" {{#if benchmarkRunning}}disabled{{/if}}>
+  <button type="button" id="batata-benchmark-btn" class="batata-bench-btn">
     <i class="fas fa-gauge-high"></i>
     {{#if benchmarkRunning}}
-      {{ localize "BATATAOU_NAO.Dialog.BenchmarkRunning" }}
+      Testando...
     {{else}}
       {{ localize "BATATAOU_NAO.Dialog.Benchmark" }}
     {{/if}}
   </button>
 
-  {{! ── Quality Cards ────────────────────────────────── }}
   <div class="batata-cards">
 
     <div class="batata-card {{#if (eq selectedLevel 0)}}active{{/if}}" data-level="0">
@@ -64,57 +61,46 @@
 
   </div>
 
-  {{! ── Granular Controls ────────────────────────────── }}
   <div class="batata-granular">
     <h3>
       <i class="fas fa-sliders"></i>
       {{ localize "BATATAOU_NAO.Dialog.Granular" }}
-      <button type="button" id="batata-reset-btn" class="batata-reset-btn" title="{{ localize 'BATATAOU_NAO.Dialog.Reset' }}">
-        <i class="fas fa-rotate-left"></i>
-      </button>
     </h3>
 
     {{#each granular as |feature|}}
     <div class="batata-granular-row">
-      <label class="batata-granular-label">
-        {{ localize feature.name }}
-      </label>
+      <span class="batata-granular-label">{{ feature.name }}</span>
 
-      {{#if (eq feature.type "select")}}
-        <select class="batata-granular-select" data-granular-toggle="{{ feature.id }}">
+      {{#if feature.isSelect}}
+        <select class="batata-granular-select" data-feature="{{ feature.id }}">
           {{#each feature.options as |opt|}}
-            <option value="{{ opt.value }}" {{#if (eq feature.currentValue opt.value)}}selected{{/if}}>
-              {{ localize opt.label }}
-            </option>
+            <option value="{{opt.value}}" {{#if opt.selected}}selected{{/if}}>{{opt.label}}</option>
           {{/each}}
         </select>
       {{else}}
         <label class="batata-switch">
-          <input type="checkbox" {{#if feature.enabled}}checked{{/if}} data-granular-toggle="{{ feature.id }}">
+          <input type="checkbox" {{#if feature.enabled}}checked{{/if}} data-feature="{{ feature.id }}">
           <span class="batata-slider"></span>
         </label>
       {{/if}}
 
-      <span class="batata-impact batata-impact-{{ feature.impact }}">
-        {{ localize (concat "BATATAOU_NAO.Impact." feature.impact) }}
-      </span>
+      <span class="batata-impact batata-impact-{{ feature.impact }}">{{ feature.impactLabel }}</span>
     </div>
     {{/each}}
 
   </div>
 
-  {{! ── Monitor ──────────────────────────────────────── }}
-  {{#if monitor.active}}
+  {{#if monitorActive}}
   <div class="batata-monitor">
     <h3><i class="fas fa-chart-line"></i> {{ localize "BATATAOU_NAO.Dialog.Monitor" }}</h3>
     <div class="batata-monitor-stats">
       <div class="batata-stat">
-        <span class="batata-stat-value">{{ monitor.currentFps }}</span>
-        <span class="batata-stat-label">FPS Atual</span>
+        <span class="batata-stat-value">{{ monitorCurrentFps }}</span>
+        <span class="batata-stat-label">FPS</span>
       </div>
       <div class="batata-stat">
-        <span class="batata-stat-value">{{ monitor.avgFps }}</span>
-        <span class="batata-stat-label">FPS Médio</span>
+        <span class="batata-stat-value">{{ monitorAvgFps }}</span>
+        <span class="batata-stat-label">Médio</span>
       </div>
     </div>
   </div>
