@@ -1,24 +1,47 @@
 name: Release
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  build:
+  build-release:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Create module.zip
-        run: zip -r ./module.zip module.json LICENSE styles/ scripts/ templates/ languages/
+      - name: Validate module.json version matches tag
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          VERSION="$(node -p "require('./module.json').version")"
+          echo "Tag: $TAG"
+          echo "module.json: $VERSION"
+          if [ "$TAG" != "$VERSION" ]; then
+            echo "Version mismatch: tag v$TAG != module.json $VERSION"
+            exit 1
+          fi
 
-      - name: Upload assets to release
+      - name: Create module.zip
+        shell: bash
+        run: |
+          rm -f module.zip
+          zip -r module.zip module.json LICENSE styles scripts templates languages
+
+      - name: Create or update GitHub release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
         run: |
-          gh release upload ${{ github.event.release.tag_name }} ./module.zip --clobber
-          gh release upload ${{ github.event.release.tag_name }} ./module.json --clobber
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
+            gh release create "$GITHUB_REF_NAME" \
+              --title "$GITHUB_REF_NAME" \
+              --notes "Release $GITHUB_REF_NAME"
+
+          gh release upload "$GITHUB_REF_NAME" module.zip module.json --clobber
