@@ -1,123 +1,116 @@
 /**
  * Controles granulares — switches individuais por feature pesada.
+ * Estado reflete o valor REAL aplicado no cliente, não defaults internos.
  * @module granular
  */
 
 import { getSetting, setSetting, SETTING_KEYS } from "./settings.js";
-import { validateQualityLevel, deepClone } from "./utils.js";
+import { validateQualityLevel, debugLog, isSettingRegistered } from "./utils.js";
 
 /**
  * Definição de uma feature granular.
  * @typedef {Object} GranularFeature
- * @property {string} id — ID único
- * @property {string} name — Chave de localização
- * @property {string} description — Chave de localização
- * @property {string} category — Categoria (rendering, animation, lighting, vision, effects)
- * @property {any} defaultValueOff — Valor quando desligado
- * @property {any} defaultValueOn — Valor quando ligado
- * @property {string} module — Módulo alvo (geralmente "core")
- * @property {string} setting — Setting key do Foundry
+ * @property {string} id
+ * @property {string} name — chave de localização
+ * @property {string} category
+ * @property {string} module — namespace do setting (geralmente "core")
+ * @property {string} setting — key do setting no Foundry
+ * @property {string[]} [keyCandidates] — keys alternativas se a principal não existir
+ * @property {any} defaultValueOn
+ * @property {any} defaultValueOff
+ * @property {string} impact
+ * @property {string} [type] — "select" para opções múltiplas
+ * @property {Array<{value: any, label: string}>} [options]
  */
 
-/** Registry de features granulares pesadas do Foundry. */
+/** Registry de features granulares. */
 export const GRANULAR_FEATURES = [
   {
     id: "softShadows",
     name: "BATATAOU_NAO.Feature.SoftShadows.Name",
-    description: "BATATAOU_NAO.Feature.SoftShadows.Description",
     category: "rendering",
-    defaultValueOff: false,
-    defaultValueOn: true,
     module: "core",
     setting: "lightSoftEdges",
+    keyCandidates: ["lightSoftEdges"],
+    defaultValueOn: true,
+    defaultValueOff: false,
     impact: "high",
   },
   {
     id: "mipmap",
     name: "BATATAOU_NAO.Feature.Mipmap.Name",
-    description: "BATATAOU_NAO.Feature.Mipmap.Description",
     category: "rendering",
-    defaultValueOff: "OFF",
-    defaultValueOn: "ON",
     module: "core",
     setting: "mipmap",
+    keyCandidates: ["mipmap"],
+    defaultValueOn: "ON",
+    defaultValueOff: "OFF",
     impact: "medium",
   },
   {
     id: "msaa",
     name: "BATATAOU_NAO.Feature.MSAA.Name",
-    description: "BATATAOU_NAO.Feature.MSAA.Description",
     category: "rendering",
-    defaultValueOff: false,
-    defaultValueOn: true,
     module: "core",
     setting: "msaa",
+    keyCandidates: ["msaa"],
+    defaultValueOn: true,
+    defaultValueOff: false,
     impact: "high",
   },
   {
     id: "smaa",
     name: "BATATAOU_NAO.Feature.SMAA.Name",
-    description: "BATATAOU_NAO.Feature.SMAA.Description",
     category: "rendering",
-    defaultValueOff: false,
-    defaultValueOn: true,
     module: "core",
     setting: "smaa",
+    keyCandidates: ["smaa"],
+    defaultValueOn: true,
+    defaultValueOff: false,
     impact: "medium",
   },
   {
     id: "lightAnimations",
     name: "BATATAOU_NAO.Feature.LightAnimations.Name",
-    description: "BATATAOU_NAO.Feature.LightAnimations.Description",
     category: "animation",
-    defaultValueOff: false,
-    defaultValueOn: true,
     module: "core",
     setting: "lightAnimation",
+    keyCandidates: ["lightAnimation"],
+    defaultValueOn: true,
+    defaultValueOff: false,
     impact: "high",
   },
   {
     id: "visionAnimations",
     name: "BATATAOU_NAO.Feature.VisionAnimations.Name",
-    description: "BATATAOU_NAO.Feature.VisionAnimations.Description",
     category: "animation",
-    defaultValueOff: false,
-    defaultValueOn: true,
     module: "core",
     setting: "visionAnimation",
-    impact: "high",
-  },
-  {
-    id: "weatherEffects",
-    name: "BATATAOU_NAO.Feature.WeatherEffects.Name",
-    description: "BATATAOU_NAO.Feature.WeatherEffects.Description",
-    category: "effects",
-    defaultValueOff: false,
+    keyCandidates: ["visionAnimation"],
     defaultValueOn: true,
-    module: "core",
-    setting: "weatherEffects",
-    impact: "medium",
+    defaultValueOff: false,
+    impact: "high",
   },
   {
     id: "photosensitiveMode",
     name: "BATATAOU_NAO.Feature.PhotosensitiveMode.Name",
-    description: "BATATAOU_NAO.Feature.PhotosensitiveMode.Description",
     category: "effects",
-    defaultValueOff: false,
-    defaultValueOn: true,
     module: "core",
     setting: "photosensitiveMode",
+    keyCandidates: ["photosensitiveMode"],
+    defaultValueOn: false,
+    defaultValueOff: true,
     impact: "low",
   },
   {
     id: "maxFPS",
     name: "BATATAOU_NAO.Feature.MaxFPS.Name",
-    description: "BATATAOU_NAO.Feature.MaxFPS.Description",
     category: "rendering",
-    defaultValueOff: 15,
-    defaultValueOn: 60,
     module: "core",
     setting: "maxFPS",
+    keyCandidates: ["maxFPS", "fps"],
+    defaultValueOn: 60,
+    defaultValueOff: 15,
     impact: "high",
     type: "select",
     options: [
@@ -132,29 +125,59 @@ export const GRANULAR_FEATURES = [
 ];
 
 /**
- * Obtém o estado atual de todas as features granulares.
- * @returns {Array<GranularFeature & { currentValue: any, enabled: boolean }>}
+ * Lê o valor REAL de um setting no Foundry.
+ * Tenta a key principal e os candidatos.
+ * @param {GranularFeature} feature
+ * @returns {{ value: any, available: boolean }}
+ */
+function _readRealValue(feature) {
+  const keys = [feature.setting, ...(feature.keyCandidates ?? [])];
+  const seen = new Set();
+  for (const key of keys) {
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (isSettingRegistered(feature.module, key)) {
+      try {
+        return { value: game.settings.get(feature.module, key), available: true };
+      } catch {
+        /* tenta próxima */
+      }
+    }
+  }
+  return { value: undefined, available: false };
+}
+
+/**
+ * Estado atual das features — reflete o valor real do cliente.
+ * Override custom do usuário > valor real do Foundry > default.
+ * @returns {Array<GranularFeature & { currentValue: any, enabled: boolean, available: boolean }>}
  */
 export function getGranularState() {
   const customMap = getSetting(SETTING_KEYS.SETTINGS_MAP) ?? {};
   const currentLevel = getSetting(SETTING_KEYS.POTATO_LEVEL);
 
   return GRANULAR_FEATURES.map((feature) => {
-    // Checar se há override custom para o nível atual
-    const customValue = customMap[currentLevel]?.[feature.module]?.[feature.setting];
+    const real = _readRealValue(feature);
+    const customValue =
+      customMap[currentLevel]?.[feature.module]?.[feature.setting];
+
+    // Prioridade: override custom > valor real aplicado > default
     const currentValue =
-      customValue !== undefined ? customValue : feature.defaultValueOn;
+      customValue !== undefined ? customValue : real.value !== undefined ? real.value : feature.defaultValueOn;
 
     return {
       ...feature,
       currentValue,
-      enabled: currentValue !== feature.defaultValueOff,
+      available: real.available,
+      enabled: feature.type === "select"
+        ? true
+        : currentValue !== feature.defaultValueOff,
     };
   });
 }
 
 /**
- * Define o valor de uma feature granular.
+ * Define o valor de uma feature: persiste override e aplica no cliente.
  * @param {string} featureId
  * @param {any} value
  */
@@ -174,12 +197,11 @@ export function setGranularFeature(featureId, value) {
   customMap[currentLevel][feature.module][feature.setting] = value;
   setSetting(SETTING_KEYS.SETTINGS_MAP, customMap);
 
-  // Aplicar imediatamente
   _applySingleFeature(feature, value);
 }
 
 /**
- * Toggle rápido de uma feature granular.
+ * Toggle rápido de uma feature.
  * @param {string} featureId
  */
 export function toggleGranularFeature(featureId) {
@@ -187,13 +209,16 @@ export function toggleGranularFeature(featureId) {
   const feature = state.find((f) => f.id === featureId);
   if (!feature) return;
 
-  const newValue = feature.enabled ? feature.defaultValueOff : feature.defaultValueOn;
+  const newValue = feature.enabled
+    ? feature.defaultValueOff
+    : feature.defaultValueOn;
   setGranularFeature(featureId, newValue);
 }
 
 /**
- * Aplica todas as features granulares de um nível.
+ * Gera updates granulares para um nível (usado por applyQuality).
  * @param {number} level
+ * @returns {Array<{module: string, setting: string, value: any, candidates?: string[]}>}
  */
 export function applyGranular(level) {
   validateQualityLevel(level);
@@ -201,24 +226,23 @@ export function applyGranular(level) {
   const customMap = getSetting(SETTING_KEYS.SETTINGS_MAP) ?? {};
   const levelOverrides = customMap[level] ?? {};
 
-  const updates = [];
-  for (const feature of GRANULAR_FEATURES) {
-    const value =
-      levelOverrides[feature.module]?.[feature.setting] ??
-      feature.defaultValueOn;
-
-    updates.push({
-      module: feature.module,
-      setting: feature.setting,
-      value,
-    });
-  }
-
-  return updates;
+  return GRANULAR_FEATURES.filter((f) => f.type !== "select" || f.id === "maxFPS").map(
+    (feature) => {
+      const value =
+        levelOverrides[feature.module]?.[feature.setting] ??
+        feature.defaultValueOn;
+      return {
+        module: feature.module,
+        setting: feature.setting,
+        value,
+        candidates: feature.keyCandidates,
+      };
+    }
+  );
 }
 
 /**
- * Reseta todas as features granulares de um nível para os defaults.
+ * Reseta overrides granulares de um nível.
  * @param {number} level
  */
 export function resetGranular(level) {
@@ -232,14 +256,16 @@ export function resetGranular(level) {
 // ─── Internos ───────────────────────────────────────────────────
 
 function _applySingleFeature(feature, value) {
-  if (!canvas?.ready && feature.module === "core") return;
-
-  try {
-    game.settings.set(feature.module, feature.setting, value);
-  } catch (err) {
-    console.error(
-      `BatataOuNao | Falha ao aplicar ${feature.module}.${feature.setting}:`,
-      err
-    );
+  const keys = [feature.setting, ...(feature.keyCandidates ?? [])];
+  for (const key of keys) {
+    if (isSettingRegistered(feature.module, key)) {
+      game.settings
+        .set(feature.module, key, value)
+        .catch((err) =>
+          console.error(`BatataOuNao | Falha em ${feature.module}.${key}:`, err)
+        );
+      return;
+    }
   }
+  debugLog(`Feature ${feature.id}: nenhum setting registrado — pulado`);
 }

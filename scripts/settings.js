@@ -11,6 +11,7 @@ export const SETTING_KEYS = {
   HAS_BEEN_PROMPTED: "hasBeenPrompted",
   POTATO_LEVEL: "potatoLevel",
   SETTINGS_MAP: "settingsMap",
+  DEBUG_LOGS: "debugLogs",
 };
 
 /** Definições dos settings para game.settings.register. */
@@ -43,6 +44,14 @@ const DEFINITIONS = {
     config: false,
     default: {},
     type: Object,
+  },
+  [SETTING_KEYS.DEBUG_LOGS]: {
+    name: "BATATAOU_NAO.Settings.DebugLogs.Name",
+    hint: "BATATAOU_NAO.Settings.DebugLogs.Hint",
+    scope: "client",
+    config: true,
+    default: false,
+    type: Boolean,
   },
 };
 

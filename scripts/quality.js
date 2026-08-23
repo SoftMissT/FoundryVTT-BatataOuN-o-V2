@@ -1,11 +1,12 @@
 /**
- * Quality presets — inteligentes, baseados no benchmark.
+ * Quality presets — aplicação defensiva contra Foundry v14.
+ * Keys com candidatos: aplica a primeira registrada; pula inexistentes.
  * @module quality
  */
 
-import { deepClone, batchSetSettings, validateQualityLevel } from "./utils.js";
+import { deepClone, batchSetSettings, validateQualityLevel, debugLog } from "./utils.js";
 import { getSetting, setSetting, SETTING_KEYS } from "./settings.js";
-import { GRANULAR_FEATURES, applyGranular } from "./granular.js";
+import { applyGranular } from "./granular.js";
 
 /** Labels legíveis dos níveis. */
 export const QUALITY_LABELS = {
@@ -14,7 +15,19 @@ export const QUALITY_LABELS = {
   2: "BATATAOU_NAO.Quality.High",
 };
 
-/** Presets padrão para cada nível. */
+/**
+ * Candidatos de keys por conceito — Foundry mudou nomes entre versões.
+ * O primeiro registrado é usado; nenhum → pulado com log de debug.
+ */
+const KEY_CANDIDATES = {
+  maxFPS: ["maxFPS", "fps"],
+  performanceMode: ["performanceMode", "mode"],
+};
+
+/**
+ * Presets padrão por nível.
+ * `setting` é o conceito; a resolução real usa KEY_CANDIDATES.
+ */
 const DEFAULT_PRESETS = [
   {
     // Nível 0 — Batata: máximo desempenho
@@ -27,7 +40,6 @@ const DEFAULT_PRESETS = [
       maxFPS: 10,
       lightAnimation: false,
       visionAnimation: false,
-      weatherEffects: false,
       photosensitiveMode: true,
       pixelRatioResolutionScaling: false,
     },
@@ -43,7 +55,6 @@ const DEFAULT_PRESETS = [
       maxFPS: 30,
       lightAnimation: true,
       visionAnimation: true,
-      weatherEffects: true,
       photosensitiveMode: false,
       pixelRatioResolutionScaling: true,
     },
@@ -59,7 +70,6 @@ const DEFAULT_PRESETS = [
       maxFPS: 60,
       lightAnimation: true,
       visionAnimation: true,
-      weatherEffects: true,
       photosensitiveMode: false,
       pixelRatioResolutionScaling: true,
     },
@@ -67,15 +77,14 @@ const DEFAULT_PRESETS = [
 ];
 
 /**
- * Obtém presets mesclados (defaults + custom do usuário).
+ * Presets mesclados com overrides custom do usuário.
  * @returns {Array<Object>}
  */
 function getMergedPresets() {
   const custom = getSetting(SETTING_KEYS.SETTINGS_MAP) ?? {};
-  return DEFAULT_PRESETS.map((defaults, idx) => {
-    const overrides = custom[idx] ?? {};
-    return deepMerge(defaults, overrides);
-  });
+  return DEFAULT_PRESETS.map((defaults, idx) =>
+    deepMerge(defaults, custom[idx] ?? {})
+  );
 }
 
 function deepMerge(target, source) {
@@ -97,7 +106,7 @@ function deepMerge(target, source) {
 }
 
 /**
- * Retorna o nível atual.
+ * Nível atual.
  * @returns {number}
  */
 export function getCurrentQuality() {
@@ -105,7 +114,7 @@ export function getCurrentQuality() {
 }
 
 /**
- * Retorna os settings ativos para o nível atual.
+ * Settings ativos do nível atual.
  * @returns {Object}
  */
 export function getCurrentSettings() {
@@ -115,24 +124,9 @@ export function getCurrentSettings() {
 }
 
 /**
- * Retorna total de settings por nível.
- * @returns {number[]}
- */
-export function getSettingsCountPerLevel() {
-  const presets = getMergedPresets();
-  return presets.map((preset) => {
-    let count = 0;
-    for (const group of Object.values(preset)) {
-      count += Object.keys(group).length;
-    }
-    return count;
-  });
-}
-
-/**
- * Aplica os settings de um nível — batch update.
+ * Aplica um nível de qualidade — defensivo, batch, com candidatos de key.
  * @param {number} level
- * @returns {Promise<PromiseSettledResult<any>[]>}
+ * @returns {Promise<{applied: number, skipped: number, failed: number}>}
  */
 export async function applyQuality(level) {
   validateQualityLevel(level);
@@ -141,30 +135,34 @@ export async function applyQuality(level) {
   const preset = presets[level];
 
   const updates = [];
-  for (const [module, settings] of Object.entries(preset)) {
-    for (const [setting, value] of Object.entries(settings)) {
-      updates.push({ module, setting, value });
+  for (const [moduleName, settings] of Object.entries(preset)) {
+    for (const [concept, value] of Object.entries(settings)) {
+      updates.push({
+        module: moduleName,
+        setting: concept,
+        value,
+        candidates: KEY_CANDIDATES[concept] ?? [concept],
+      });
     }
   }
 
-  // Adicionar updates das features granulares
-  const granularUpdates = applyGranular(level);
-  for (const u of granularUpdates) {
-    // Só adicionar se não já está nos presets base
+  // Features granulares que não colidem com o preset base
+  for (const u of applyGranular(level)) {
     const exists = updates.some(
       (x) => x.module === u.module && x.setting === u.setting
     );
     if (!exists) updates.push(u);
   }
 
-  const results = await batchSetSettings(updates);
+  const summary = await batchSetSettings(updates);
   await setSetting(SETTING_KEYS.POTATO_LEVEL, level);
 
-  const applied = results.filter((r) => r.status === "fulfilled").length;
-  const failed = results.filter((r) => r.status === "rejected").length;
+  debugLog(
+    `Qualidade ${level} aplicada: ${summary.applied} ok, ${summary.skipped} pulados, ${summary.failed} falhas`
+  );
   console.log(
-    `BatataOuNao | Qualidade ${level} aplicada: ${applied} ok, ${failed} falhas`
+    `BatataOuNao | Qualidade ${level}: ${summary.applied} aplicados, ${summary.skipped} indisponíveis`
   );
 
-  return results;
+  return summary;
 }

@@ -44,5 +44,7 @@
   "BATATAOU_NAO.Settings.PotatoLevel.Name": "Quality level",
   "BATATAOU_NAO.Settings.PotatoLevel.Hint": "0=Potato, 1=Good Potato, 2=Premium.",
   "BATATAOU_NAO.Settings.OpenDialog.Name": "Configure Quality",
-  "BATATAOU_NAO.Settings.OpenDialog.Label": "Open Dialog"
+  "BATATAOU_NAO.Settings.OpenDialog.Label": "Open Dialog",
+  "BATATAOU_NAO.Settings.DebugLogs.Name": "Debug Logs",
+  "BATATAOU_NAO.Settings.DebugLogs.Hint": "Writes detailed logs to the console. Keep off for daily play."
 }

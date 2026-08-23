@@ -10,11 +10,23 @@
   {{#if benchmark}}
   <div class="batata-benchmark-result">
     <div class="batata-score">
+      {{#if benchmark.score}}
       <span class="batata-score-value">{{ benchmark.score }}</span>
       <span class="batata-score-label">/100</span>
+      {{else}}
+      <span class="batata-score-value">--</span>
+      {{/if}}
     </div>
-    <div class="batata-fps">{{ benchmark.fps }} FPS</div>
-    <div class="batata-tier">{{ benchmark.recommendedLabel }}</div>
+    <div class="batata-fps">
+      {{#if benchmark.fpsAvailable}}
+        {{ benchmark.fps }} FPS
+      {{else}}
+        FPS indisponível
+      {{/if}}
+    </div>
+    {{#if benchmark.recommendedLabel}}
+    <div class="batata-tier">{{ localize "BATATAOU_NAO.Dialog.Recommended" }}: {{ benchmark.recommendedLabel }}</div>
+    {{/if}}
   </div>
   {{/if}}
 
@@ -94,14 +106,14 @@
   <div class="batata-monitor">
     <h3><i class="fas fa-chart-line"></i> {{ localize "BATATAOU_NAO.Dialog.Monitor" }}</h3>
     <div class="batata-monitor-stats">
-      <div class="batata-stat">
-        <span class="batata-stat-value">{{ monitorCurrentFps }}</span>
-        <span class="batata-stat-label">FPS</span>
-      </div>
-      <div class="batata-stat">
-        <span class="batata-stat-value">{{ monitorAvgFps }}</span>
-        <span class="batata-stat-label">Médio</span>
-      </div>
+    <div class="batata-stat">
+      <span class="batata-stat-value" data-monitor-current>{{ monitorCurrentFps }}</span>
+      <span class="batata-stat-label">FPS</span>
+    </div>
+    <div class="batata-stat">
+      <span class="batata-stat-value" data-monitor-avg>{{ monitorAvgFps }}</span>
+      <span class="batata-stat-label">Médio</span>
+    </div>
     </div>
   </div>
   {{/if}}

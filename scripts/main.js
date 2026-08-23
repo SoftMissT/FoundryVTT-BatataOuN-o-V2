@@ -1,6 +1,6 @@
 /**
  * Batata Ou Nao — Entry Point
- * Modulo Foundry VTT v14+ para otimizacao real de performance.
+ * Modulo Foundry VTT v14+ para diagnostico e ajuste real de performance.
  *
  * @module main
  */
@@ -10,6 +10,7 @@ import { applyQuality, getCurrentQuality } from "./quality.js";
 import { PotatoDialog } from "./application.js";
 import { PotatoOrNotAPI } from "./api.js";
 import { startMonitor } from "./monitor.js";
+import { debugEnabled, debugLog } from "./utils.js";
 
 export const MODULE_ID = "batata-ou-nao";
 
@@ -17,7 +18,7 @@ export const MODULE_ID = "batata-ou-nao";
 
 Hooks.on("init", () => {
   registerSettings();
-  console.log("BatataOuNao | Settings registrados");
+  debugLog("Settings registrados");
 });
 
 // ─── Ready ──────────────────────────────────────────────────────
@@ -25,10 +26,8 @@ Hooks.on("init", () => {
 Hooks.on("ready", () => {
   const t0 = performance.now();
 
-  // API publica
   window.PotatoOrNot = new PotatoOrNotAPI();
 
-  // Menu de settings
   game.settings.registerMenu(MODULE_ID, "openDialog", {
     name: "BATATAOU_NAO.Settings.OpenDialog.Name",
     label: "BATATAOU_NAO.Settings.OpenDialog.Label",
@@ -37,11 +36,9 @@ Hooks.on("ready", () => {
     restricted: false,
   });
 
-  // Aplicar settings e iniciar monitor
   _postSetup();
 
-  const ms = (performance.now() - t0).toFixed(2);
-  console.log(`BatataOuNao | Pronto em ${ms}ms`);
+  debugLog(`Pronto em ${(performance.now() - t0).toFixed(2)}ms`);
   Hooks.call("BatataOuNaoReady");
 });
 
@@ -57,6 +54,5 @@ function _postSetup() {
     applyQuality(getCurrentQuality());
   }
 
-  // Iniciar monitor de performance
   startMonitor({ autoAdjust: promptUsers });
 }
