@@ -1,0 +1,271 @@
+/* ─── Batata Ou Nao — Estilos ─────────────────────────── */
+
+.batata-dialog {
+  text-align: center;
+}
+
+.batata-dialog h1 {
+  font-size: 1.4em;
+  margin-bottom: 8px;
+}
+
+/* ── GPU Info ──────────────────────────────────────── */
+
+.batata-gpu-info {
+  font-size: 0.8em;
+  color: #999;
+  margin-bottom: 10px;
+}
+
+.batata-gpu-value {
+  color: #ccc;
+  font-weight: bold;
+}
+
+/* ── Benchmark ─────────────────────────────────────── */
+
+.batata-benchmark-result {
+  background: rgba(255, 215, 0, 0.08);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.batata-score {
+  font-size: 2em;
+  font-weight: bold;
+  color: #FFD700;
+}
+
+.batata-score-label {
+  font-size: 0.5em;
+  color: #999;
+}
+
+.batata-fps {
+  font-size: 0.9em;
+  color: #ccc;
+}
+
+.batata-tier {
+  font-size: 0.85em;
+  color: #FFD700;
+  margin-top: 4px;
+}
+
+.batata-bench-btn {
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 8px;
+  background: rgba(255, 215, 0, 0.1);
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  color: #FFD700;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.batata-bench-btn:hover {
+  background: rgba(255, 215, 0, 0.2);
+}
+
+.batata-bench-btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+/* ── Quality Cards ─────────────────────────────────── */
+
+.batata-cards {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.batata-card {
+  flex: 1;
+  border: 2px solid #555;
+  border-radius: 6px;
+  padding: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.batata-card:hover {
+  border-color: #888;
+}
+
+.batata-card[active="true"],
+.batata-card.active {
+  border-color: #FFD700;
+  background: rgba(255, 215, 0, 0.1);
+}
+
+.batata-card-img img {
+  max-width: 100%;
+  height: 60px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.batata-card-text h2 {
+  font-size: 0.95em;
+  margin: 4px 0 2px;
+}
+
+.batata-card-text p {
+  font-size: 0.75em;
+  color: #999;
+  margin: 0;
+}
+
+/* ── Granular Controls ─────────────────────────────── */
+
+.batata-granular {
+  text-align: left;
+  margin-bottom: 12px;
+}
+
+.batata-granular h3 {
+  font-size: 1em;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.batata-reset-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 2px 6px;
+  font-size: 0.85em;
+}
+
+.batata-reset-btn:hover {
+  color: #FFD700;
+}
+
+.batata-granular-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.batata-granular-label {
+  flex: 1;
+  font-size: 0.85em;
+}
+
+.batata-granular-select {
+  width: 80px;
+  font-size: 0.8em;
+}
+
+/* ── Toggle Switch ─────────────────────────────────── */
+
+.batata-switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+}
+
+.batata-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.batata-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: #555;
+  border-radius: 20px;
+  transition: 0.3s;
+}
+
+.batata-slider::before {
+  content: "";
+  position: absolute;
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: 0.3s;
+}
+
+.batata-switch input:checked + .batata-slider {
+  background: #FFD700;
+}
+
+.batata-switch input:checked + .batata-slider::before {
+  transform: translateX(16px);
+}
+
+/* ── Impact Badge ──────────────────────────────────── */
+
+.batata-impact {
+  font-size: 0.7em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.batata-impact-high {
+  background: rgba(255, 43, 74, 0.2);
+  color: #FF2B4A;
+}
+
+.batata-impact-medium {
+  background: rgba(255, 215, 0, 0.2);
+  color: #FFD700;
+}
+
+.batata-impact-low {
+  background: rgba(46, 255, 122, 0.2);
+  color: #2EFF7A;
+}
+
+/* ── Monitor ───────────────────────────────────────── */
+
+.batata-monitor {
+  text-align: left;
+  margin-bottom: 10px;
+}
+
+.batata-monitor h3 {
+  font-size: 0.95em;
+  margin-bottom: 6px;
+}
+
+.batata-monitor-stats {
+  display: flex;
+  gap: 16px;
+}
+
+.batata-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.batata-stat-value {
+  font-size: 1.4em;
+  font-weight: bold;
+  color: #FFD700;
+}
+
+.batata-stat-label {
+  font-size: 0.75em;
+  color: #999;
+}

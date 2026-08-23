@@ -1,0 +1,132 @@
+<div class="batata-dialog">
+
+  <h1>{{ localize "BATATAOU_NAO.Dialog.Title" }}</h1>
+
+  {{! ── GPU Info ─────────────────────────────────────── }}
+  <div class="batata-gpu-info">
+    <span class="batata-gpu-label">{{ localize "BATATAOU_NAO.Dialog.GPU" }}:</span>
+    <span class="batata-gpu-value">{{ gpu.renderer }}</span>
+  </div>
+
+  {{! ── Benchmark ────────────────────────────────────── }}
+  {{#if benchmark}}
+  <div class="batata-benchmark-result">
+    <div class="batata-score">
+      <span class="batata-score-value">{{ benchmark.score }}</span>
+      <span class="batata-score-label">/100</span>
+    </div>
+    <div class="batata-fps">{{ benchmark.fps }} FPS médio</div>
+    <div class="batata-tier">{{ localize "BATATAOU_NAO.Dialog.Recommended" }}: {{ localize (get qualityLabels benchmark.tier) }}</div>
+  </div>
+  {{/if}}
+
+  <button type="button" id="batata-benchmark-btn" class="batata-bench-btn" {{#if benchmarkRunning}}disabled{{/if}}>
+    <i class="fas fa-gauge-high"></i>
+    {{#if benchmarkRunning}}
+      {{ localize "BATATAOU_NAO.Dialog.BenchmarkRunning" }}
+    {{else}}
+      {{ localize "BATATAOU_NAO.Dialog.Benchmark" }}
+    {{/if}}
+  </button>
+
+  {{! ── Quality Cards ────────────────────────────────── }}
+  <div class="batata-cards">
+
+    <div class="batata-card {{#if (eq selectedLevel 0)}}active{{/if}}" data-level="0">
+      <div class="batata-card-img">
+        <img src="modules/batata-ou-nao/styles/img/bad_potato.webp">
+      </div>
+      <div class="batata-card-text">
+        <h2>{{ localize "BATATAOU_NAO.Quality.Low" }}</h2>
+        <p>{{ localize "BATATAOU_NAO.Quality.LowDescription" }}</p>
+      </div>
+    </div>
+
+    <div class="batata-card {{#if (eq selectedLevel 1)}}active{{/if}}" data-level="1">
+      <div class="batata-card-img">
+        <img src="modules/batata-ou-nao/styles/img/potato.webp">
+      </div>
+      <div class="batata-card-text">
+        <h2>{{ localize "BATATAOU_NAO.Quality.Medium" }}</h2>
+        <p>{{ localize "BATATAOU_NAO.Quality.MediumDescription" }}</p>
+      </div>
+    </div>
+
+    <div class="batata-card {{#if (eq selectedLevel 2)}}active{{/if}}" data-level="2">
+      <div class="batata-card-img">
+        <img src="modules/batata-ou-nao/styles/img/good_potato.webp">
+      </div>
+      <div class="batata-card-text">
+        <h2>{{ localize "BATATAOU_NAO.Quality.High" }}</h2>
+        <p>{{ localize "BATATAOU_NAO.Quality.HighDescription" }}</p>
+      </div>
+    </div>
+
+  </div>
+
+  {{! ── Granular Controls ────────────────────────────── }}
+  <div class="batata-granular">
+    <h3>
+      <i class="fas fa-sliders"></i>
+      {{ localize "BATATAOU_NAO.Dialog.Granular" }}
+      <button type="button" id="batata-reset-btn" class="batata-reset-btn" title="{{ localize 'BATATAOU_NAO.Dialog.Reset' }}">
+        <i class="fas fa-rotate-left"></i>
+      </button>
+    </h3>
+
+    {{#each granular as |feature|}}
+    <div class="batata-granular-row">
+      <label class="batata-granular-label">
+        {{ localize feature.name }}
+      </label>
+
+      {{#if (eq feature.type "select")}}
+        <select class="batata-granular-select" data-granular-toggle="{{ feature.id }}">
+          {{#each feature.options as |opt|}}
+            <option value="{{ opt.value }}" {{#if (eq feature.currentValue opt.value)}}selected{{/if}}>
+              {{ localize opt.label }}
+            </option>
+          {{/each}}
+        </select>
+      {{else}}
+        <label class="batata-switch">
+          <input type="checkbox" {{#if feature.enabled}}checked{{/if}} data-granular-toggle="{{ feature.id }}">
+          <span class="batata-slider"></span>
+        </label>
+      {{/if}}
+
+      <span class="batata-impact batata-impact-{{ feature.impact }}">
+        {{ localize (concat "BATATAOU_NAO.Impact." feature.impact) }}
+      </span>
+    </div>
+    {{/each}}
+
+  </div>
+
+  {{! ── Monitor ──────────────────────────────────────── }}
+  {{#if monitor.active}}
+  <div class="batata-monitor">
+    <h3><i class="fas fa-chart-line"></i> {{ localize "BATATAOU_NAO.Dialog.Monitor" }}</h3>
+    <div class="batata-monitor-stats">
+      <div class="batata-stat">
+        <span class="batata-stat-value">{{ monitor.currentFps }}</span>
+        <span class="batata-stat-label">FPS Atual</span>
+      </div>
+      <div class="batata-stat">
+        <span class="batata-stat-value">{{ monitor.avgFps }}</span>
+        <span class="batata-stat-label">FPS Médio</span>
+      </div>
+    </div>
+  </div>
+  {{/if}}
+
+  <hr>
+
+  <footer class="form-footer">
+    <button type="submit" class="dialog-button">
+      <i class="fas fa-check"></i>
+      {{ localize "BATATAOU_NAO.Dialog.Accept" }}
+    </button>
+  </footer>
+
+</div>
