@@ -8,6 +8,13 @@
   "BATATAOU_NAO.Dialog.Granular": "Advanced Controls",
   "BATATAOU_NAO.Dialog.Reset": "Reset to defaults",
   "BATATAOU_NAO.Dialog.Monitor": "Performance Monitor",
+  "BATATAOU_NAO.Dialog.BenchmarkRequired": "Run the benchmark to unlock Apply — without measurement, any setting is a guess.",
+  "BATATAOU_NAO.Dialog.OverrideTitle": "Different from recommended",
+  "BATATAOU_NAO.Dialog.OverrideAbove": "You are choosing a level ABOVE what your machine was measured for. This can cause: low FPS, stutters in busy scenes and lag during combat.",
+  "BATATAOU_NAO.Dialog.OverrideBelow": "You are choosing a level BELOW the recommendation. Your machine can handle more: you will lose shadows, anti-aliasing and animations for nothing.",
+  "BATATAOU_NAO.Dialog.OverrideNoFps": "Your FPS could not be measured (background tab or unavailable meter). Choose manually — if the game feels heavy, come back here and run the benchmark again.",
+  "BATATAOU_NAO.Dialog.OverrideConfirm": "Apply anyway",
+  "BATATAOU_NAO.Dialog.OverrideCancel": "Go back",
 
   "BATATAOU_NAO.Quality.Low": "Potato",
   "BATATAOU_NAO.Quality.LowDescription": "Absolute minimum. Your computer can't handle more than this.",

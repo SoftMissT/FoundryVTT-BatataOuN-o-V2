@@ -39,6 +39,8 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
   #selectedLevel = getCurrentQuality();
   #benchmarkResult = null;
   #benchmarkRunning = false;
+  #benchmarkDone = false;
+  #overrideConfirmed = false;
   #tickHandler = null;
 
   async _prepareContext() {
@@ -61,6 +63,7 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
       gpu: gpu.renderer,
       benchmark,
       benchmarkRunning: this.#benchmarkRunning,
+      benchmarkDone: this.#benchmarkDone,
       granular,
       monitorActive: monitor.active,
       monitorCurrentFps: monitor.currentFps,
@@ -80,6 +83,7 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
           .forEach((c) => c.removeAttribute("active"));
         el.setAttribute("active", "true");
         this.#selectedLevel = Number(el.dataset.level);
+        this.#overrideConfirmed = false;
       });
     });
 
@@ -110,6 +114,21 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
     this.#tickHandler = (monitorState) => this.#updateMonitorDom(monitorState);
     Hooks.on("BatataOuNaoMonitorTick", this.#tickHandler);
 
+    // Gate: benchmark obrigatório antes de aplicar + confirmação de override
+    const submitBtn = this.element.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = !this.#benchmarkDone;
+      submitBtn.addEventListener("click", async (e) => {
+        if (this.#overrideConfirmed || !this.#needsOverrideConfirm()) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const ok = await this.#confirmOverride();
+        if (!ok) return;
+        this.#overrideConfirmed = true;
+        submitBtn.click();
+      });
+    }
+
     game.settings.sheet?.close();
   }
 
@@ -138,6 +157,7 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
     this.render();
 
     this.#benchmarkResult = await runBenchmark(3000);
+    this.#benchmarkDone = true;
 
     // Só auto-seleciona se o FPS foi confiável
     if (this.#benchmarkResult.tier !== null) {
@@ -148,6 +168,54 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
     this.render();
 
     Hooks.call("BatataOuNaoBenchmarkComplete", this.#benchmarkResult);
+  }
+
+  /**
+   * Verifica se a escolha atual exige confirmação de override.
+   * Exige quando não há benchmark, quando o FPS não pôde ser medido
+   * ou quando o nível escolhido difere do tier recomendado.
+   * @returns {boolean}
+   */
+  #needsOverrideConfirm() {
+    if (!this.#benchmarkDone || !this.#benchmarkResult) return false;
+    if (this.#benchmarkResult.tier === null) return true;
+    return this.#selectedLevel !== this.#benchmarkResult.tier;
+  }
+
+  /**
+   * Diálogo de confirmação para override do tier recomendado,
+   * avisando os problemas possíveis de cada direção.
+   * @returns {Promise<boolean>}
+   */
+  async #confirmOverride() {
+    const result = this.#benchmarkResult;
+    let warnKey = "BATATAOU_NAO.Dialog.OverrideNoFps";
+    if (result?.tier !== null && result) {
+      warnKey =
+        this.#selectedLevel > result.tier
+          ? "BATATAOU_NAO.Dialog.OverrideAbove"
+          : "BATATAOU_NAO.Dialog.OverrideBelow";
+    }
+    const recommended = result?.tier !== null && result
+      ? game.i18n.localize(QUALITY_LABELS[result.tier])
+      : null;
+
+    const content = `<p>${game.i18n.localize(warnKey)}</p>${
+      recommended ? `<p><strong>${game.i18n.localize("BATATAOU_NAO.Dialog.Recommended")}: ${recommended}</strong></p>` : ""
+    }`;
+
+    return foundry.applications.api.DialogV2.confirm({
+      window: { title: game.i18n.localize("BATATAOU_NAO.Dialog.OverrideTitle") },
+      content,
+      yes: {
+        label: game.i18n.localize("BATATAOU_NAO.Dialog.OverrideConfirm"),
+        icon: "fas fa-check",
+      },
+      no: {
+        label: game.i18n.localize("BATATAOU_NAO.Dialog.OverrideCancel"),
+        icon: "fas fa-xmark",
+      },
+    });
   }
 
   #buildGranularContext() {

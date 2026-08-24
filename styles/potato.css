@@ -272,3 +272,17 @@
   font-size: 0.8em;
   color: #999;
 }
+
+/* ── Benchmark obrigatório ──────────────────────────── */
+
+.batata-bench-required {
+  font-size: 0.85em;
+  color: #FFB300;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.form-footer .dialog-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

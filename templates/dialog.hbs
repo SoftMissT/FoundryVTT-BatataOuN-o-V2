@@ -120,8 +120,15 @@
 
   <hr>
 
+  {{#unless benchmarkDone}}
+  <p class="batata-bench-required">
+    <i class="fas fa-gauge-high"></i>
+    {{ localize "BATATAOU_NAO.Dialog.BenchmarkRequired" }}
+  </p>
+  {{/unless}}
+
   <footer class="form-footer">
-    <button type="submit" class="dialog-button">
+    <button type="submit" class="dialog-button" {{#unless benchmarkDone}}disabled{{/unless}}>
       <i class="fas fa-check"></i>
       {{ localize "BATATAOU_NAO.Dialog.Accept" }}
     </button>

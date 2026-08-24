@@ -8,6 +8,13 @@
   "BATATAOU_NAO.Dialog.Granular": "Controles Avançados",
   "BATATAOU_NAO.Dialog.Reset": "Resetar para padrão",
   "BATATAOU_NAO.Dialog.Monitor": "Monitor de Performance",
+  "BATATAOU_NAO.Dialog.BenchmarkRequired": "Rode o benchmark para liberar o botão Aplicar — sem medição, qualquer ajuste é chute.",
+  "BATATAOU_NAO.Dialog.OverrideTitle": "Escolha diferente da recomendada",
+  "BATATAOU_NAO.Dialog.OverrideAbove": "Você está escolhendo um nível ACIMA do recomendado para sua máquina. Isso pode causar: FPS baixo, travamentos em cenas cheias e stuttering durante o combate.",
+  "BATATAOU_NAO.Dialog.OverrideBelow": "Você está escolhendo um nível ABAIXO do recomendado. Sua máquina aguenta mais: você perderá sombras, anti-aliasing e animações à toa.",
+  "BATATAOU_NAO.Dialog.OverrideNoFps": "Não foi possível medir seu FPS (aba em segundo plano ou medidor indisponível). Escolha manualmente — se o jogo ficar pesado, volte aqui e rode o benchmark novamente.",
+  "BATATAOU_NAO.Dialog.OverrideConfirm": "Aplicar assim mesmo",
+  "BATATAOU_NAO.Dialog.OverrideCancel": "Voltar",
 
   "BATATAOU_NAO.Quality.Low": "Batata",
   "BATATAOU_NAO.Quality.LowDescription": "Mínimo absoluto. O computador não aguenta mais que isso.",
