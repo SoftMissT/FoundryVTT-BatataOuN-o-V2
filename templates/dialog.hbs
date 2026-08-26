@@ -33,7 +33,9 @@
   <button type="button" id="batata-benchmark-btn" class="batata-bench-btn">
     <i class="fas fa-gauge-high"></i>
     {{#if benchmarkRunning}}
-      Testando...
+      {{ localize "BATATAOU_NAO.Dialog.BenchmarkRunning" }}
+    {{else if benchmarkDone}}
+      {{ localize "BATATAOU_NAO.Dialog.ReBenchmark" }}
     {{else}}
       {{ localize "BATATAOU_NAO.Dialog.Benchmark" }}
     {{/if}}
@@ -41,7 +43,7 @@
 
   <div class="batata-cards">
 
-    <div class="batata-card {{#if (eq selectedLevel 0)}}active{{/if}}" data-level="0">
+    <div class="batata-card {{#if (eq selectedLevel 0)}}active{{/if}}" data-level="0" {{#if (eq selectedLevel 0)}}active="true"{{/if}}>
       <div class="batata-card-img">
         <img src="modules/batata-ou-nao/styles/img/bad_potato.webp">
       </div>
@@ -51,7 +53,7 @@
       </div>
     </div>
 
-    <div class="batata-card {{#if (eq selectedLevel 1)}}active{{/if}}" data-level="1">
+    <div class="batata-card {{#if (eq selectedLevel 1)}}active{{/if}}" data-level="1" {{#if (eq selectedLevel 1)}}active="true"{{/if}}>
       <div class="batata-card-img">
         <img src="modules/batata-ou-nao/styles/img/potato.webp">
       </div>
@@ -61,7 +63,7 @@
       </div>
     </div>
 
-    <div class="batata-card {{#if (eq selectedLevel 2)}}active{{/if}}" data-level="2">
+    <div class="batata-card {{#if (eq selectedLevel 2)}}active{{/if}}" data-level="2" {{#if (eq selectedLevel 2)}}active="true"{{/if}}>
       <div class="batata-card-img">
         <img src="modules/batata-ou-nao/styles/img/good_potato.webp">
       </div>

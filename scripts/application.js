@@ -37,9 +37,9 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
   };
 
   #selectedLevel = getCurrentQuality();
-  #benchmarkResult = null;
+  #benchmarkResult = getSetting(SETTING_KEYS.BENCHMARK_RESULT) || null;
   #benchmarkRunning = false;
-  #benchmarkDone = false;
+  #benchmarkDone = Boolean(getSetting(SETTING_KEYS.BENCHMARK_RESULT));
   #overrideConfirmed = false;
   #tickHandler = null;
 
@@ -47,6 +47,11 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
     const gpu = detectGPU();
     const monitor = getMonitorState();
     const granular = this.#buildGranularContext();
+
+    if (!this.#benchmarkResult) {
+      this.#benchmarkResult = getSetting(SETTING_KEYS.BENCHMARK_RESULT) || null;
+      this.#benchmarkDone = Boolean(this.#benchmarkResult);
+    }
 
     const benchmark = this.#benchmarkResult
       ? {
@@ -80,8 +85,12 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
         e.preventDefault();
         this.element
           .querySelectorAll(".batata-card")
-          .forEach((c) => c.removeAttribute("active"));
+          .forEach((c) => {
+            c.removeAttribute("active");
+            c.classList.remove("active");
+          });
         el.setAttribute("active", "true");
+        el.classList.add("active");
         this.#selectedLevel = Number(el.dataset.level);
         this.#overrideConfirmed = false;
       });
@@ -137,6 +146,9 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
       Hooks.off("BatataOuNaoMonitorTick", this.#tickHandler);
       this.#tickHandler = null;
     }
+    if (!getSetting(SETTING_KEYS.HAS_BEEN_PROMPTED)) {
+      await setSetting(SETTING_KEYS.HAS_BEEN_PROMPTED, true);
+    }
     await super._onClose(options);
   }
 
@@ -158,6 +170,12 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
 
     this.#benchmarkResult = await runBenchmark(3000);
     this.#benchmarkDone = true;
+
+    try {
+      await setSetting(SETTING_KEYS.BENCHMARK_RESULT, this.#benchmarkResult);
+    } catch (err) {
+      console.warn("BatataOuNao | Erro ao salvar benchmarkResult:", err);
+    }
 
     // Só auto-seleciona se o FPS foi confiável
     if (this.#benchmarkResult.tier !== null) {
@@ -240,7 +258,7 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
   }
 
   static async #onFormSubmit(event, form, formData) {
-    const active = form.querySelector(".batata-card[active]");
+    const active = form.querySelector(".batata-card[active], .batata-card.active");
     if (!active) return;
 
     const level = Number(active.dataset.level);

@@ -50,7 +50,7 @@ function _postSetup() {
 
   if (!hasBeenPrompted && promptUsers) {
     new PotatoDialog().render(true);
-  } else if (hasBeenPrompted) {
+  } else {
     applyQuality(getCurrentQuality());
   }
 

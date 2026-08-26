@@ -8,6 +8,7 @@ import {
   getCurrentSettings,
   applyQuality,
 } from "./quality.js";
+import { getSetting, setSetting, SETTING_KEYS } from "./settings.js";
 import { validateQualityLevel } from "./utils.js";
 import { PotatoDialog } from "./application.js";
 import { runBenchmark, detectGPU, getGLParameters } from "./benchmark.js";
@@ -38,12 +39,26 @@ export class PotatoOrNotAPI {
     return getCurrentSettings();
   }
 
+  get lastBenchmark() {
+    return getSetting(SETTING_KEYS.BENCHMARK_RESULT);
+  }
+
+  get benchmarkResult() {
+    return getSetting(SETTING_KEYS.BENCHMARK_RESULT);
+  }
+
   showDialog() {
     return new PotatoDialog().render(true);
   }
 
   async benchmark(durationMs = 3000) {
-    return runBenchmark(durationMs);
+    const result = await runBenchmark(durationMs);
+    try {
+      await setSetting(SETTING_KEYS.BENCHMARK_RESULT, result);
+    } catch {
+      /* não interrompe API */
+    }
+    return result;
   }
 
   getGPU() {

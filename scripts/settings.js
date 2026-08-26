@@ -12,6 +12,7 @@ export const SETTING_KEYS = {
   POTATO_LEVEL: "potatoLevel",
   SETTINGS_MAP: "settingsMap",
   DEBUG_LOGS: "debugLogs",
+  BENCHMARK_RESULT: "benchmarkResult",
 };
 
 /** Definições dos settings para game.settings.register. */
@@ -43,6 +44,12 @@ const DEFINITIONS = {
     scope: "client",
     config: false,
     default: {},
+    type: Object,
+  },
+  [SETTING_KEYS.BENCHMARK_RESULT]: {
+    scope: "client",
+    config: false,
+    default: null,
     type: Object,
   },
   [SETTING_KEYS.DEBUG_LOGS]: {

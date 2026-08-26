@@ -5,7 +5,7 @@
  */
 
 import { getSetting, setSetting, SETTING_KEYS } from "./settings.js";
-import { validateQualityLevel, debugLog, isSettingRegistered } from "./utils.js";
+import { validateQualityLevel, debugLog, isSettingRegistered, deepClone } from "./utils.js";
 
 /**
  * Definição de uma feature granular.
@@ -188,7 +188,7 @@ export function setGranularFeature(featureId, value) {
   }
 
   const currentLevel = getSetting(SETTING_KEYS.POTATO_LEVEL);
-  const customMap = getSetting(SETTING_KEYS.SETTINGS_MAP) ?? {};
+  const customMap = deepClone(getSetting(SETTING_KEYS.SETTINGS_MAP) ?? {});
 
   if (!customMap[currentLevel]) customMap[currentLevel] = {};
   if (!customMap[currentLevel][feature.module])
@@ -248,7 +248,7 @@ export function applyGranular(level) {
 export function resetGranular(level) {
   validateQualityLevel(level);
 
-  const customMap = getSetting(SETTING_KEYS.SETTINGS_MAP) ?? {};
+  const customMap = deepClone(getSetting(SETTING_KEYS.SETTINGS_MAP) ?? {});
   delete customMap[level];
   setSetting(SETTING_KEYS.SETTINGS_MAP, customMap);
 }

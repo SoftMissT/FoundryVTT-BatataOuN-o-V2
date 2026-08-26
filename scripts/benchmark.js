@@ -63,6 +63,7 @@ export async function runBenchmark(durationMs = 3000) {
 
   if (!canvas?.ready) {
     return {
+      timestamp: Date.now(),
       gpu: gpu.renderer,
       renderer: gpu.vendor,
       fps: null,
@@ -94,6 +95,7 @@ export async function runBenchmark(durationMs = 3000) {
   // Sem FPS confiável: sem score/tier — GPU e caps sozinhos não diagnosticam.
 
   return {
+    timestamp: Date.now(),
     gpu: gpu.renderer,
     renderer: gpu.vendor,
     fps: fpsAvailable ? Math.round(measured.fps) : null,

@@ -3,6 +3,7 @@
   "BATATAOU_NAO.Dialog.Accept": "Aplicar",
   "BATATAOU_NAO.Dialog.GPU": "GPU",
   "BATATAOU_NAO.Dialog.Benchmark": "Rodar Benchmark",
+  "BATATAOU_NAO.Dialog.ReBenchmark": "Rodar Benchmark Novamente",
   "BATATAOU_NAO.Dialog.BenchmarkRunning": "Testando...",
   "BATATAOU_NAO.Dialog.Recommended": "Recomendado",
   "BATATAOU_NAO.Dialog.Granular": "Controles Avançados",

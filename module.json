@@ -2,7 +2,7 @@
   "id": "batata-ou-nao",
   "title": "Batata Ou Não",
   "description": "Detecta se o computador do jogador é uma batata e configura os gráficos automaticamente para a melhor experiência possível.",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "compatibility": {
     "minimum": "13.350",
     "verified": "14",

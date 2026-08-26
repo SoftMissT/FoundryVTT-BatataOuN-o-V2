@@ -12,14 +12,14 @@ Ele não promete milagre. Ele mede o estado do canvas, identifica gargalos prov�
 
 Foundry VTT roda sobre canvas WebGL. Mesmo em uma máquina forte, uma cena pode ficar pesada por causa de:
 
-* muitos efeitos de luz;
-* visão dinâmica;
-* animações de token/luz;
-* mapas ou vídeos grandes;
-* módulos com hooks pesados;
-* assets não otimizados;
-* aceleração por hardware desligada;
-* navegador ou Windows usando a GPU errada.
+- muitos efeitos de luz;
+- visão dinâmica;
+- animações de token/luz;
+- mapas ou vídeos grandes;
+- módulos com hooks pesados;
+- assets não otimizados;
+- aceleração por hardware desligada;
+- navegador ou Windows usando a GPU errada.
 
 Este módulo existe para ajudar o usuário a responder:
 
@@ -33,12 +33,12 @@ Este módulo está em fase de estabilização.
 
 Prioridades atuais:
 
-* corrigir o monitor de FPS em tempo real;
-* tornar o benchmark resistente quando `canvas.fps.render` não estiver disponível;
-* validar settings core antes de aplicar;
-* evitar hooks/tickers duplicados;
-* melhorar a documentação de release;
-* impedir releases/tags quebradas.
+- corrigir o monitor de FPS em tempo real;
+- tornar o benchmark resistente quando `canvas.fps.render` não estiver disponível;
+- validar settings core antes de aplicar;
+- evitar hooks/tickers duplicados;
+- melhorar a documentação de release;
+- impedir releases/tags quebradas.
 
 ---
 
@@ -50,13 +50,13 @@ O benchmark coleta informações do ambiente gráfico e tenta medir FPS real do 
 
 Ele considera:
 
-* GPU detectada via WebGL;
-* renderer WebGL;
-* capacidades como textura máxima e renderbuffer;
-* FPS médio durante uma janela de teste;
-* qualidade recomendada para o cliente atual.
+- GPU detectada via WebGL;
+- renderer WebGL;
+- capacidades como textura máxima e renderbuffer;
+- FPS médio durante uma janela de teste;
+- qualidade recomendada para o cliente atual.
 
-Se o FPS não puder ser medido de forma confiável, o módulo informa isso claramente. `0 FPS` não é tratado como diagnóstico real de performance — o painel mostra **"FPS indisponível"** e nenhuma recomendação é gerada sem medição válida.
+Se o FPS não puder ser medido de forma confiável, o módulo informa isso claramente. `0 FPS` não é tratado como diagnóstico real de performance o painel mostra **"FPS indisponível"** e nenhuma recomendação é gerada sem medição válida.
 
 ---
 
@@ -66,12 +66,12 @@ O monitor acompanha o FPS do canvas durante a sessão.
 
 Objetivo do monitor:
 
-* mostrar FPS atual;
-* mostrar FPS médio;
-* detectar queda persistente;
-* sugerir ou aplicar downgrade de qualidade;
-* evitar ajuste agressivo a cada frame;
-* manter cooldown entre mudanças.
+- mostrar FPS atual;
+- mostrar FPS médio;
+- detectar queda persistente;
+- sugerir ou aplicar downgrade de qualidade;
+- evitar ajuste agressivo a cada frame;
+- manter cooldown entre mudanças.
 
 O monitor é leve: um único ticker callback, publicação de amostra no máximo 1x por segundo, sem spam no console e sem rerender da interface a cada frame.
 
@@ -89,17 +89,17 @@ O módulo trabalha com três perfis:
 
 Os presets atuam sobre configurações de performance do Foundry, como:
 
-* modo de performance;
-* FPS máximo;
-* sombras suaves;
-* mipmap;
-* MSAA;
-* SMAA;
-* animações de luz;
-* animações de visão;
-* modo fotosensível quando aplicável.
+- modo de performance;
+- FPS máximo;
+- sombras suaves;
+- mipmap;
+- MSAA;
+- SMAA;
+- animações de luz;
+- animações de visão;
+- modo fotosensível quando aplicável.
 
-Settings que não existirem na versão do Foundry são **pulados com segurança** — o módulo nunca quebra por setting ausente.
+Settings que não existirem na versão do Foundry são **pulados com segurança** o módulo nunca quebra por setting ausente.
 
 ---
 
@@ -118,7 +118,7 @@ Cada usuário pode ajustar recursos individuais.
 | FPS máximo         | limita consumo de CPU/GPU             |
 | Modo fotosensível  | reduz flashes e efeitos agressivos    |
 
-Os controles granulares refletem o **estado real aplicado no cliente** — o valor mostrado é lido diretamente das settings do Foundry, não de defaults internos.
+Os controles granulares refletem o **estado real aplicado no cliente** o valor mostrado é lido diretamente das settings do Foundry, não de defaults internos.
 
 ---
 
@@ -128,14 +128,14 @@ Este módulo não substitui boas práticas de otimização de world.
 
 Ele não consegue resolver sozinho:
 
-* mapas gigantes em PNG;
-* vídeos enormes;
-* dezenas de módulos pesados ativos;
-* cenas com excesso de paredes, luzes e tokens;
-* navegador sem aceleração por hardware;
-* Windows usando GPU integrada em vez da dedicada;
-* problemas de rede ou upload do host;
-* sistema de jogo com automações muito pesadas.
+- mapas gigantes em PNG;
+- vídeos enormes;
+- dezenas de módulos pesados ativos;
+- cenas com excesso de paredes, luzes e tokens;
+- navegador sem aceleração por hardware;
+- Windows usando GPU integrada em vez da dedicada;
+- problemas de rede ou upload do host;
+- sistema de jogo com automações muito pesadas.
 
 Use o módulo como diagnóstico e camada de ajuste, não como cura universal.
 
@@ -145,15 +145,15 @@ Use o módulo como diagnóstico e camada de ajuste, não como cura universal.
 
 Antes de culpar o hardware, verifique:
 
-* [ ] Aceleração por hardware está ativa no navegador ou app Foundry.
-* [ ] Windows está usando a GPU dedicada para o Foundry/browser.
-* [ ] O mundo foi testado com módulos desativados.
-* [ ] A cena usa assets WebP/WebM quando possível.
-* [ ] Vídeos foram exportados com FPS e bitrate razoáveis.
-* [ ] Luzes animadas foram reduzidas.
-* [ ] Visão dinâmica foi testada em cena pesada.
-* [ ] O FPS máximo foi limitado para clientes fracos.
-* [ ] O monitor do Batata Ou Não mostra FPS real, não "0" por falha de medição.
+- [ ] Aceleração por hardware está ativa no navegador ou app Foundry.
+- [ ] Windows está usando a GPU dedicada para o Foundry/browser.
+- [ ] O mundo foi testado com módulos desativados.
+- [ ] A cena usa assets WebP/WebM quando possível.
+- [ ] Vídeos foram exportados com FPS e bitrate razoáveis.
+- [ ] Luzes animadas foram reduzidas.
+- [ ] Visão dinâmica foi testada em cena pesada.
+- [ ] O FPS máximo foi limitado para clientes fracos.
+- [ ] O monitor do Batata Ou Não mostra FPS real, não "0" por falha de medição.
 
 ---
 
@@ -194,29 +194,29 @@ Fluxo recomendado:
 Quando o módulo estiver carregado, a API fica disponível em:
 
 ```js
-window.PotatoOrNot
+window.PotatoOrNot;
 ```
 
 Exemplos:
 
 ```js
 // Nível atual
-PotatoOrNot.quality
+PotatoOrNot.quality;
 
 // Aplicar qualidade
-await PotatoOrNot.setQuality(1)
+await PotatoOrNot.setQuality(1);
 
 // Rodar benchmark
-const result = await PotatoOrNot.benchmark(3000)
+const result = await PotatoOrNot.benchmark(3000);
 
 // Monitor
-PotatoOrNot.startMonitor({ autoAdjust: true })
-PotatoOrNot.stopMonitor()
-PotatoOrNot.monitor
+PotatoOrNot.startMonitor({ autoAdjust: true });
+PotatoOrNot.stopMonitor();
+PotatoOrNot.monitor;
 
 // GPU / WebGL
-PotatoOrNot.getGPU()
-PotatoOrNot.getGLInfo()
+PotatoOrNot.getGPU();
+PotatoOrNot.getGLInfo();
 ```
 
 ---
@@ -257,16 +257,16 @@ scripts/
 
 Este projeto usa releases GitHub com assets:
 
-* `module.json`
-* `module.zip`
+- `module.json`
+- `module.zip`
 
 Regras:
 
-* `module.json.version` deve bater com a tag.
-* A tag deve seguir `vX.Y.Z`.
-* `module.zip` é artefato de release e não deve ser commitado.
-* Releases antigas não devem ser apagadas para corrigir erro.
-* Correção de release deve gerar nova versão patch.
+- `module.json.version` deve bater com a tag.
+- A tag deve seguir `vX.Y.Z`.
+- `module.zip` é artefato de release e não deve ser commitado.
+- Releases antigas não devem ser apagadas para corrigir erro.
+- Correção de release deve gerar nova versão patch.
 
 ---
 
