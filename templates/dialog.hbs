@@ -1,10 +1,28 @@
-<div class="batata-dialog batata-hud">
+{{! ============================================================ }}
+{{! BATATA OU NÃO — Dialog Template v2                          }}
+{{! Nova versão: semântica ARIA, protocolos dinâmicos, exports  }}
+{{! ============================================================ }}
 
+<div
+  class="batata-dialog batata-hud"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="batata-dialog-title"
+  aria-describedby="batata-dialog-subline"
+>
+
+  {{! ── HEADER ──────────────────────────────────────────────── }}
   <header class="batata-hud-header">
     <div class="batata-hud-title-wrap">
-      <div class="batata-hud-kicker">{{ localize "BATATAOU_NAO.HUD.SystemTriage" }}</div>
-      <h1>{{ localize "BATATAOU_NAO.Dialog.Title" }}</h1>
-      <div class="batata-hud-subline">
+      <div class="batata-hud-kicker" id="batata-dialog-kicker">
+        {{ localize "BATATAOU_NAO.HUD.SystemTriage" }}
+      </div>
+
+      <h1 id="batata-dialog-title">
+        {{ localize "BATATAOU_NAO.Dialog.Title" }}
+      </h1>
+
+      <div class="batata-hud-subline" id="batata-dialog-subline">
         <span class="batata-hud-gpu">
           {{ localize "BATATAOU_NAO.Dialog.GPU" }}:
           <strong>{{ gpu }}</strong>
@@ -12,8 +30,16 @@
       </div>
     </div>
 
-    <div class="batata-hud-signal">
-      <span class="batata-hud-signal-label">{{ localize "BATATAOU_NAO.HUD.Signal" }}</span>
+    <div
+      class="batata-hud-signal"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <span class="batata-hud-signal-label">
+        {{ localize "BATATAOU_NAO.HUD.Signal" }}
+      </span>
+
       {{#if benchmark}}
         {{#if benchmark.reliable}}
           <span class="batata-hud-signal-value is-good">
@@ -32,410 +58,587 @@
     </div>
   </header>
 
+  {{! ── BENCHMARK RESULTS ───────────────────────────────────── }}
   {{#if benchmark}}
-  <section class="batata-hud-overview">
-    <div class="batata-overview-card batata-overview-score">
-      <div class="batata-overview-label">{{ localize "BATATAOU_NAO.HUD.Score" }}</div>
-      <div class="batata-overview-value">
-        {{#if benchmark.scoreAvailable}}
-          {{ benchmark.score }}<span>/100</span>
-        {{else}}
-          --<span>/100</span>
-        {{/if}}
-      </div>
-    </div>
+  <div
+    class="batata-hud-results"
+    role="region"
+    aria-label="{{ localize 'BATATAOU_NAO.HUD.ResultsRegion' }}"
+  >
 
-    <div class="batata-overview-card batata-overview-tier">
-      <div class="batata-overview-label">{{ localize "BATATAOU_NAO.Dialog.Recommended" }}</div>
-      <div class="batata-overview-value batata-overview-tier-value">
-        {{#if benchmark.recommendedLabel}}
-          {{ benchmark.recommendedLabel }}
-        {{else}}
-          --
-        {{/if}}
-      </div>
-    </div>
+    {{! ── OVERVIEW ──────────────────────────────────────────── }}
+    <section class="batata-hud-overview" aria-labelledby="batata-overview-heading">
+      <h2 class="visually-hidden" id="batata-overview-heading">
+        {{ localize "BATATAOU_NAO.HUD.Overview" }}
+      </h2>
 
-    <div class="batata-overview-card batata-overview-scene">
-      <div class="batata-overview-label">{{ localize "BATATAOU_NAO.Dialog.SceneWeight" }}</div>
-      <div class="batata-overview-value">
-        {{#if benchmark.sceneWeight.available}}
-          {{ benchmark.sceneWeight.score }}
-        {{else}}
-          --
-        {{/if}}
-      </div>
-    </div>
-  </section>
+      <article class="batata-overview-card batata-overview-score">
+        <div class="batata-overview-label">
+          {{ localize "BATATAOU_NAO.HUD.Score" }}
+        </div>
 
-  <section class="batata-vitals-grid">
-
-    <article class="batata-vital-panel batata-vital-body">
-      <div class="batata-vital-heading">
-        <span class="batata-vital-dot"></span>
-        <h2>{{ localize "BATATAOU_NAO.HUD.Body" }}</h2>
-      </div>
-
-      <div class="batata-vital-main">
-        <div class="batata-vital-big">
-          {{#if benchmark.fpsAvailable}}
-            {{ benchmark.fps }}
+        <div class="batata-overview-value">
+          {{#if benchmark.scoreAvailable}}
+            {{ benchmark.score }}<span aria-hidden="true">/100</span>
           {{else}}
-            --
+            <span aria-hidden="true">--</span><span aria-hidden="true">/100</span>
+            <span class="visually-hidden">{{ localize "BATATAOU_NAO.HUD.NoData" }}</span>
           {{/if}}
         </div>
-        <div class="batata-vital-big-label">FPS</div>
-      </div>
+      </article>
 
-      {{#if benchmark.baseline}}
-      <div class="batata-vital-list">
-        <div class="batata-vital-row">
-          <span>{{ localize "BATATAOU_NAO.Metric.Low1Fps" }}</span>
-          <strong>{{ benchmark.baseline.low1Fps }} FPS</strong>
+      <article class="batata-overview-card batata-overview-tier">
+        <div class="batata-overview-label">
+          {{ localize "BATATAOU_NAO.Dialog.Recommended" }}
         </div>
-        <div class="batata-vital-row">
-          <span>{{ localize "BATATAOU_NAO.Metric.LongFrames" }}</span>
-          <strong>{{ benchmark.baseline.longFrames }}</strong>
-        </div>
-        <div class="batata-vital-row">
-          <span>{{ localize "BATATAOU_NAO.Metric.Samples" }}</span>
-          <strong>{{ benchmark.baseline.sampleCount }}</strong>
-        </div>
-      </div>
-      {{/if}}
-    </article>
 
-    <article class="batata-vital-panel batata-vital-mind">
-      <div class="batata-vital-heading">
-        <span class="batata-vital-dot"></span>
-        <h2>{{ localize "BATATAOU_NAO.HUD.Mind" }}</h2>
-      </div>
-
-      <div class="batata-vital-main">
-        <div class="batata-vital-big">
-          {{#if benchmark.avgFrameMs}}
-            {{ benchmark.avgFrameMs }}
+        <div class="batata-overview-value batata-overview-tier-value">
+          {{#if benchmark.recommendedLabel}}
+            {{ benchmark.recommendedLabel }}
           {{else}}
-            --
+            <span aria-hidden="true">--</span>
+            <span class="visually-hidden">{{ localize "BATATAOU_NAO.HUD.NoData" }}</span>
           {{/if}}
         </div>
-        <div class="batata-vital-big-label">ms</div>
-      </div>
+      </article>
 
-      {{#if benchmark.baseline}}
-      <div class="batata-vital-list">
-        <div class="batata-vital-row">
-          <span>{{ localize "BATATAOU_NAO.Metric.P95" }}</span>
-          <strong>{{ benchmark.baseline.p95FrameMs }}ms</strong>
+      <article class="batata-overview-card batata-overview-scene">
+        <div class="batata-overview-label">
+          {{ localize "BATATAOU_NAO.Dialog.SceneWeight" }}
         </div>
-        <div class="batata-vital-row">
-          <span>{{ localize "BATATAOU_NAO.Metric.P99" }}</span>
-          <strong>{{ benchmark.baseline.p99FrameMs }}ms</strong>
-        </div>
-        <div class="batata-vital-row">
-          <span>{{ localize "BATATAOU_NAO.Metric.Stutter" }}</span>
-          <strong>{{ benchmark.baseline.stutterPct }}%</strong>
-        </div>
-      </div>
-      {{/if}}
-    </article>
 
-    <article class="batata-vital-panel batata-vital-spirit">
-      <div class="batata-vital-heading">
-        <span class="batata-vital-dot"></span>
-        <h2>{{ localize "BATATAOU_NAO.HUD.Spirit" }}</h2>
-      </div>
-
-      <div class="batata-vital-main">
-        <div class="batata-vital-big batata-vital-big-compact">
+        <div class="batata-overview-value">
           {{#if benchmark.sceneWeight.available}}
             {{ benchmark.sceneWeight.score }}
           {{else}}
-            --
+            <span aria-hidden="true">--</span>
+            <span class="visually-hidden">{{ localize "BATATAOU_NAO.HUD.NoData" }}</span>
           {{/if}}
         </div>
-        <div class="batata-vital-big-label">{{ localize "BATATAOU_NAO.Dialog.SceneWeight" }}</div>
-      </div>
+      </article>
+    </section>
 
-      <div class="batata-vital-list">
-        <div class="batata-vital-row">
-          <span>{{ localize "BATATAOU_NAO.HUD.Renderer" }}</span>
-          <strong>
-            {{#if benchmark.gpuInfo.renderer}}
-              {{ benchmark.gpuInfo.renderer }}
+    {{! ── VITALS ────────────────────────────────────────────── }}
+    <section class="batata-vitals-grid" aria-labelledby="batata-vitals-heading">
+      <h2 class="visually-hidden" id="batata-vitals-heading">
+        {{ localize "BATATAOU_NAO.HUD.Vitals" }}
+      </h2>
+
+      {{! Corpo }}
+      <article class="batata-vital-panel batata-vital-body">
+        <div class="batata-vital-heading">
+          <span class="batata-vital-dot" aria-hidden="true"></span>
+          <h3>{{ localize "BATATAOU_NAO.HUD.Body" }}</h3>
+        </div>
+
+        <div class="batata-vital-main">
+          <div class="batata-vital-big">
+            {{#if benchmark.fpsAvailable}}
+              {{ benchmark.fps }}
             {{else}}
-              {{ gpu }}
+              <span aria-hidden="true">--</span>
+              <span class="visually-hidden">{{ localize "BATATAOU_NAO.HUD.NoData" }}</span>
             {{/if}}
-          </strong>
+          </div>
+
+          <div class="batata-vital-big-label">FPS</div>
         </div>
-        <div class="batata-vital-row">
-          <span>{{ localize "BATATAOU_NAO.Metric.MeasurementSource" }}</span>
-          <strong>
-            {{#if benchmark.baseline.fpsSource}}
-              {{ benchmark.baseline.fpsSource }}
+
+        {{#if benchmark.baseline}}
+        <dl class="batata-vital-list">
+          <div class="batata-vital-row">
+            <dt>{{ localize "BATATAOU_NAO.Metric.AvgFps" }}</dt>
+            <dd>{{ benchmark.baseline.avgFps }}</dd>
+          </div>
+
+          <div class="batata-vital-row">
+            <dt>{{ localize "BATATAOU_NAO.Metric.Low1Fps" }}</dt>
+            <dd>{{ benchmark.baseline.low1Fps }} FPS</dd>
+          </div>
+
+          <div class="batata-vital-row">
+            <dt>{{ localize "BATATAOU_NAO.Metric.LongFrames" }}</dt>
+            <dd>{{ benchmark.baseline.longFrames }}</dd>
+          </div>
+
+          <div class="batata-vital-row">
+            <dt>{{ localize "BATATAOU_NAO.Metric.Samples" }}</dt>
+            <dd>{{ benchmark.baseline.sampleCount }}</dd>
+          </div>
+        </dl>
+        {{/if}}
+      </article>
+
+      {{! Mente }}
+      <article class="batata-vital-panel batata-vital-mind">
+        <div class="batata-vital-heading">
+          <span class="batata-vital-dot" aria-hidden="true"></span>
+          <h3>{{ localize "BATATAOU_NAO.HUD.Mind" }}</h3>
+        </div>
+
+        <div class="batata-vital-main">
+          <div class="batata-vital-big">
+            {{#if benchmark.avgFrameMs}}
+              {{ benchmark.avgFrameMs }}
             {{else}}
-              --
+              <span aria-hidden="true">--</span>
+              <span class="visually-hidden">{{ localize "BATATAOU_NAO.HUD.NoData" }}</span>
             {{/if}}
-          </strong>
+          </div>
+
+          <div class="batata-vital-big-label">ms</div>
         </div>
-        <div class="batata-vital-row">
-          <span>{{ localize "BATATAOU_NAO.HUD.Confidence" }}</span>
-          <strong>
-            {{#if benchmark.recommendation.confidence}}
-              {{ benchmark.recommendation.confidence }}
+
+        {{#if benchmark.baseline}}
+        <dl class="batata-vital-list">
+          <div class="batata-vital-row">
+            <dt>{{ localize "BATATAOU_NAO.Metric.AvgFrame" }}</dt>
+            <dd>{{ benchmark.baseline.avgFrameMs }}ms</dd>
+          </div>
+
+          <div class="batata-vital-row">
+            <dt>{{ localize "BATATAOU_NAO.Metric.P95" }}</dt>
+            <dd>{{ benchmark.baseline.p95FrameMs }}ms</dd>
+          </div>
+
+          <div class="batata-vital-row">
+            <dt>{{ localize "BATATAOU_NAO.Metric.P99" }}</dt>
+            <dd>{{ benchmark.baseline.p99FrameMs }}ms</dd>
+          </div>
+
+          <div class="batata-vital-row">
+            <dt>{{ localize "BATATAOU_NAO.Metric.Stutter" }}</dt>
+            <dd>{{ benchmark.baseline.stutterPct }}%</dd>
+          </div>
+        </dl>
+        {{/if}}
+      </article>
+
+      {{! Espírito }}
+      <article class="batata-vital-panel batata-vital-spirit">
+        <div class="batata-vital-heading">
+          <span class="batata-vital-dot" aria-hidden="true"></span>
+          <h3>{{ localize "BATATAOU_NAO.HUD.Spirit" }}</h3>
+        </div>
+
+        <div class="batata-vital-main">
+          <div class="batata-vital-big batata-vital-big-compact">
+            {{#if benchmark.sceneWeight.available}}
+              {{ benchmark.sceneWeight.score }}
             {{else}}
-              --
+              <span aria-hidden="true">--</span>
+              <span class="visually-hidden">{{ localize "BATATAOU_NAO.HUD.NoData" }}</span>
             {{/if}}
-          </strong>
+          </div>
+
+          <div class="batata-vital-big-label">
+            {{ localize "BATATAOU_NAO.Dialog.SceneWeight" }}
+          </div>
         </div>
+
+        <dl class="batata-vital-list">
+          <div class="batata-vital-row">
+            <dt>{{ localize "BATATAOU_NAO.HUD.Renderer" }}</dt>
+            <dd>
+              {{#if benchmark.gpuInfo.renderer}}
+                {{ benchmark.gpuInfo.renderer }}
+              {{else}}
+                {{ gpu }}
+              {{/if}}
+            </dd>
+          </div>
+
+          <div class="batata-vital-row">
+            <dt>{{ localize "BATATAOU_NAO.Metric.MeasurementSource" }}</dt>
+            <dd>
+              {{#if benchmark.baseline.fpsSource}}
+                {{ benchmark.baseline.fpsSource }}
+              {{else}}
+                <span aria-hidden="true">--</span>
+                <span class="visually-hidden">{{ localize "BATATAOU_NAO.HUD.NoData" }}</span>
+              {{/if}}
+            </dd>
+          </div>
+
+          <div class="batata-vital-row">
+            <dt>{{ localize "BATATAOU_NAO.HUD.Confidence" }}</dt>
+            <dd>
+              {{#if benchmark.recommendation.confidence}}
+                {{ benchmark.recommendation.confidence }}
+              {{else}}
+                <span aria-hidden="true">--</span>
+                <span class="visually-hidden">{{ localize "BATATAOU_NAO.HUD.NoData" }}</span>
+              {{/if}}
+            </dd>
+          </div>
+        </dl>
+      </article>
+    </section>
+
+    {{! ── GRAPHS ────────────────────────────────────────────── }}
+    <section class="batata-graphs-section" aria-labelledby="batata-graphs-heading">
+      <div class="batata-section-title" id="batata-graphs-heading">
+        <i class="fas fa-wave-square" aria-hidden="true"></i>
+        <span>{{ localize "BATATAOU_NAO.HUD.LiveDiagnostics" }}</span>
       </div>
-    </article>
 
-  </section>
+      <div
+        class="batata-graphs-grid"
+        role="group"
+        aria-label="{{ localize 'BATATAOU_NAO.HUD.GraphsGroup' }}"
+      >
+        <figure class="batata-graph-card graph-body">
+          <figcaption class="batata-graph-title">FPS</figcaption>
+          <div
+            class="batata-graph-frame"
+            role="img"
+            aria-label="{{ localize 'BATATAOU_NAO.HUD.GraphFpsDesc' }}"
+          >
+            {{{ benchmark.graphs.fpsSvg }}}
+          </div>
+        </figure>
 
-  <section class="batata-graphs-section">
-    <div class="batata-section-title">
-      <i class="fas fa-wave-square"></i>
-      <span>{{ localize "BATATAOU_NAO.HUD.LiveDiagnostics" }}</span>
-    </div>
+        <figure class="batata-graph-card graph-mind">
+          <figcaption class="batata-graph-title">
+            {{ localize "BATATAOU_NAO.Metric.AvgFrame" }}
+          </figcaption>
+          <div
+            class="batata-graph-frame"
+            role="img"
+            aria-label="{{ localize 'BATATAOU_NAO.HUD.GraphFrameDesc' }}"
+          >
+            {{{ benchmark.graphs.frameSvg }}}
+          </div>
+        </figure>
 
-    <div class="batata-graphs-grid">
-      <div class="batata-graph-card graph-body">
-        <div class="batata-graph-title">FPS</div>
-        <div class="batata-graph-placeholder">
-          {{#if benchmark.graphs.fps}}
-            {{{ benchmark.graphs.fps }}}
-          {{else}}
-            <div class="batata-graph-scanline"></div>
-            <div class="batata-graph-text">{{ localize "BATATAOU_NAO.HUD.GraphComingSoon" }}</div>
-          {{/if}}
+        <figure class="batata-graph-card graph-spirit">
+          <figcaption class="batata-graph-title">
+            {{ localize "BATATAOU_NAO.Metric.Stutter" }}
+          </figcaption>
+          <div
+            class="batata-graph-frame"
+            role="img"
+            aria-label="{{ localize 'BATATAOU_NAO.HUD.GraphQualityDesc' }}"
+          >
+            {{{ benchmark.graphs.qualitySvg }}}
+          </div>
+        </figure>
+      </div>
+    </section>
+
+    {{! ── DIAGNOSIS ─────────────────────────────────────────── }}
+    <section class="batata-diagnosis-grid" aria-labelledby="batata-diagnosis-heading">
+      <h2 class="visually-hidden" id="batata-diagnosis-heading">
+        {{ localize "BATATAOU_NAO.HUD.DiagnosisRegion" }}
+      </h2>
+
+      <article class="batata-diagnosis-card">
+        <div class="batata-section-title">
+          <i class="fas fa-notes-medical" aria-hidden="true"></i>
+          <span>{{ localize "BATATAOU_NAO.HUD.Diagnosis" }}</span>
         </div>
-      </div>
 
-      <div class="batata-graph-card graph-mind">
-        <div class="batata-graph-title">{{ localize "BATATAOU_NAO.Metric.AvgFrame" }}</div>
-        <div class="batata-graph-placeholder">
-          {{#if benchmark.graphs.frameMs}}
-            {{{ benchmark.graphs.frameMs }}}
-          {{else}}
-            <div class="batata-graph-scanline"></div>
-            <div class="batata-graph-text">{{ localize "BATATAOU_NAO.HUD.GraphComingSoon" }}</div>
-          {{/if}}
+        {{#if benchmark.recommendationReasons}}
+        <ul class="batata-diagnosis-list">
+          {{#each benchmark.recommendationReasons as |reason|}}
+            <li>{{ reason }}</li>
+          {{/each}}
+        </ul>
+        {{else}}
+        <p class="batata-empty-note">
+          {{ localize "BATATAOU_NAO.HUD.NoDiagnosis" }}
+        </p>
+        {{/if}}
+      </article>
+
+      <article class="batata-diagnosis-card">
+        <div class="batata-section-title">
+          <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+          <span>{{ localize "BATATAOU_NAO.Dialog.ReliabilityWarnings" }}</span>
         </div>
+
+        {{#if benchmark.reliabilityWarnings}}
+        <ul class="batata-diagnosis-list batata-warn-list">
+          {{#each benchmark.reliabilityWarnings as |warning|}}
+            <li>{{ warning }}</li>
+          {{/each}}
+        </ul>
+        {{else}}
+        <p class="batata-empty-note batata-good-note">
+          {{ localize "BATATAOU_NAO.HUD.NoWarnings" }}
+        </p>
+        {{/if}}
+      </article>
+    </section>
+
+    {{! ── TECHNICAL NOTES ───────────────────────────────────── }}
+    {{#if benchmark.notes}}
+    <section class="batata-tech-notes" aria-labelledby="batata-notes-heading">
+      <div class="batata-section-title" id="batata-notes-heading">
+        <i class="fas fa-flask" aria-hidden="true"></i>
+        <span>{{ localize "BATATAOU_NAO.Dialog.TechnicalNotes" }}</span>
       </div>
 
-      <div class="batata-graph-card graph-spirit">
-        <div class="batata-graph-title">{{ localize "BATATAOU_NAO.Metric.Stutter" }}</div>
-        <div class="batata-graph-placeholder">
-          {{#if benchmark.graphs.quality}}
-            {{{ benchmark.graphs.quality }}}
-          {{else}}
-            <div class="batata-graph-scanline"></div>
-            <div class="batata-graph-text">{{ localize "BATATAOU_NAO.HUD.GraphComingSoon" }}</div>
-          {{/if}}
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="batata-diagnosis-grid">
-    <article class="batata-diagnosis-card">
-      <div class="batata-section-title">
-        <i class="fas fa-notes-medical"></i>
-        <span>{{ localize "BATATAOU_NAO.HUD.Diagnosis" }}</span>
-      </div>
-
-      {{#if benchmark.recommendationReasons}}
       <ul class="batata-diagnosis-list">
-        {{#each benchmark.recommendationReasons as |reason|}}
-          <li>{{ reason }}</li>
+        {{#each benchmark.notes as |note|}}
+          <li>{{ note }}</li>
         {{/each}}
       </ul>
-      {{else}}
-      <div class="batata-empty-note">{{ localize "BATATAOU_NAO.HUD.NoDiagnosis" }}</div>
-      {{/if}}
-    </article>
+    </section>
+    {{/if}}
 
-    <article class="batata-diagnosis-card">
-      <div class="batata-section-title">
-        <i class="fas fa-triangle-exclamation"></i>
-        <span>{{ localize "BATATAOU_NAO.Dialog.ReliabilityWarnings" }}</span>
-      </div>
-
-      {{#if benchmark.reliabilityWarnings}}
-      <ul class="batata-diagnosis-list batata-warn-list">
-        {{#each benchmark.reliabilityWarnings as |warning|}}
-          <li>{{ warning }}</li>
-        {{/each}}
-      </ul>
-      {{else}}
-      <div class="batata-empty-note batata-good-note">{{ localize "BATATAOU_NAO.HUD.NoWarnings" }}</div>
-      {{/if}}
-    </article>
-  </section>
-
-  {{#if benchmark.notes}}
-  <section class="batata-tech-notes">
-    <div class="batata-section-title">
-      <i class="fas fa-flask"></i>
-      <span>{{ localize "BATATAOU_NAO.Dialog.TechnicalNotes" }}</span>
-    </div>
-    <ul class="batata-diagnosis-list">
-      {{#each benchmark.notes as |note|}}
-        <li>{{ note }}</li>
-      {{/each}}
-    </ul>
-  </section>
-  {{/if}}
+  </div>
   {{/if}}
 
-  <section class="batata-benchmark-action-strip">
-    <div class="batata-action-grid">
-      <button type="button" id="batata-benchmark-btn" class="batata-bench-btn" {{#if benchmarkRunning}}disabled{{/if}}>
-        <i class="fas fa-gauge-high"></i>
+  {{! ── ACTION BUTTONS ──────────────────────────────────────── }}
+  <fieldset class="batata-action-grid">
+    <legend class="visually-hidden">
+      {{ localize "BATATAOU_NAO.HUD.Actions" }}
+    </legend>
+
+    <button
+      type="button"
+      id="batata-benchmark-btn"
+      class="batata-action-btn batata-bench-btn"
+      {{#if benchmarkRunning}}disabled aria-busy="true"{{/if}}
+    >
+      <i class="fas fa-gauge-high" aria-hidden="true"></i>
+      <span>
         {{#if benchmarkRunning}}
           {{ localize "BATATAOU_NAO.Dialog.BenchmarkRunning" }}
-        {{else if benchmarkDone}}
-          {{ localize "BATATAOU_NAO.Dialog.ReBenchmark" }}
         {{else}}
-          {{ localize "BATATAOU_NAO.Dialog.Benchmark" }}
+          {{#if benchmarkDone}}
+            {{ localize "BATATAOU_NAO.Dialog.ReBenchmark" }}
+          {{else}}
+            {{ localize "BATATAOU_NAO.Dialog.Benchmark" }}
+          {{/if}}
         {{/if}}
-      </button>
+      </span>
+    </button>
 
-      <button type="button" id="batata-journal-btn" class="batata-journal-btn" {{#unless benchmarkDone}}disabled{{/unless}} {{#if benchmarkRunning}}disabled{{/if}} {{#if journalCreating}}disabled{{/if}}>
-        <i class="fas fa-book-medical"></i>
-        {{#if journalCreating}}
-          {{ localize "BATATAOU_NAO.Dialog.JournalRunning" }}
-        {{else}}
-          {{ localize "BATATAOU_NAO.Dialog.GenerateJournal" }}
-        {{/if}}
-      </button>
-    </div>
+    <button
+      type="button"
+      id="batata-journal-btn"
+      class="batata-action-btn batata-journal-btn"
+      {{#unless benchmarkDone}}disabled{{/unless}}
+      {{#if journalRunning}}disabled aria-busy="true"{{/if}}
+    >
+      <i class="fas fa-book-medical" aria-hidden="true"></i>
+      <span>{{ localize "BATATAOU_NAO.Dialog.GenerateJournal" }}</span>
+    </button>
 
+    <button
+      type="button"
+      id="batata-export-md-btn"
+      class="batata-action-btn batata-export-md-btn"
+      {{#unless benchmarkDone}}disabled{{/unless}}
+      {{#if exportRunning}}disabled aria-busy="true"{{/if}}
+    >
+      <i class="fas fa-file-lines" aria-hidden="true"></i>
+      <span>{{ localize "BATATAOU_NAO.Dialog.ExportMarkdown" }}</span>
+    </button>
+
+    <button
+      type="button"
+      id="batata-export-json-btn"
+      class="batata-action-btn batata-export-json-btn"
+      {{#unless benchmarkDone}}disabled{{/unless}}
+      {{#if exportRunning}}disabled aria-busy="true"{{/if}}
+    >
+      <i class="fas fa-file-code" aria-hidden="true"></i>
+      <span>{{ localize "BATATAOU_NAO.Dialog.ExportJson" }}</span>
+    </button>
+  </fieldset>
+
+  {{! ── STATUS MESSAGES ─────────────────────────────────────── }}
+  <div class="batata-status-messages" role="status" aria-live="polite" aria-atomic="true">
     {{#unless benchmarkDone}}
     <p class="batata-bench-required">
-      <i class="fas fa-gauge-high"></i>
+      <i class="fas fa-gauge-high" aria-hidden="true"></i>
       {{ localize "BATATAOU_NAO.Dialog.BenchmarkRequired" }}
     </p>
     {{/unless}}
 
     {{#if benchmarkRunning}}
     <p class="batata-bench-running-note">
-      <i class="fas fa-spinner fa-spin"></i>
+      <i class="fas fa-spinner fa-spin" aria-hidden="true"></i>
       {{ localize "BATATAOU_NAO.Dialog.BenchmarkRunningNote" }}
     </p>
     {{/if}}
-  </section>
+  </div>
 
-  <section class="batata-protocols-section">
-    <div class="batata-section-title">
-      <i class="fas fa-shield-halved"></i>
+  {{! ── PROTOCOL CARDS ──────────────────────────────────────── }}
+  <section
+    class="batata-protocols-section"
+    aria-labelledby="batata-protocols-heading"
+    role="radiogroup"
+    aria-label="{{ localize 'BATATAOU_NAO.HUD.ProtocolSelection' }}"
+  >
+    <div class="batata-section-title" id="batata-protocols-heading">
+      <i class="fas fa-shield-halved" aria-hidden="true"></i>
       <span>{{ localize "BATATAOU_NAO.HUD.Protocols" }}</span>
     </div>
 
     <div class="batata-cards">
+      {{#each protocols as |protocol|}}
+      <article
+        class="batata-card {{#if protocol.active}}active{{/if}}"
+        data-level="{{ protocol.level }}"
+        role="radio"
+        aria-checked="{{#if protocol.active}}true{{else}}false{{/if}}"
+        tabindex="0"
+        aria-label="{{ protocol.name }}: {{ protocol.description }}"
+        {{#if protocol.active}}active="true"{{/if}}
+      >
+        <div class="batata-card-badge">
+          {{ localize "BATATAOU_NAO.HUD.Protocol" }}
+        </div>
 
-      <div class="batata-card {{#if (eq selectedLevel 0)}}active{{/if}}" data-level="0" {{#if (eq selectedLevel 0)}}active="true"{{/if}}>
-        <div class="batata-card-badge">{{ localize "BATATAOU_NAO.HUD.Protocol" }}</div>
         <div class="batata-card-img">
-          <img src="modules/batata-ou-nao/assets/batata_fraco.webp">
+          <img
+            src="{{ protocol.image }}"
+            alt="{{ protocol.imageAlt }}"
+            loading="lazy"
+            width="320"
+            height="150"
+          >
         </div>
-        <div class="batata-card-text">
-          <h2>{{ localize "BATATAOU_NAO.Quality.Low" }}</h2>
-          <p>{{ localize "BATATAOU_NAO.Quality.LowDescription" }}</p>
-        </div>
-      </div>
 
-      <div class="batata-card {{#if (eq selectedLevel 1)}}active{{/if}}" data-level="1" {{#if (eq selectedLevel 1)}}active="true"{{/if}}>
-        <div class="batata-card-badge">{{ localize "BATATAOU_NAO.HUD.Protocol" }}</div>
-        <div class="batata-card-img">
-          <img src="modules/batata-ou-nao/assets/batata_boa.webp">
-        </div>
         <div class="batata-card-text">
-          <h2>{{ localize "BATATAOU_NAO.Quality.Medium" }}</h2>
-          <p>{{ localize "BATATAOU_NAO.Quality.MediumDescription" }}</p>
+          <h2>{{ protocol.name }}</h2>
+          <p>{{ protocol.description }}</p>
         </div>
-      </div>
-
-      <div class="batata-card {{#if (eq selectedLevel 2)}}active{{/if}}" data-level="2" {{#if (eq selectedLevel 2)}}active="true"{{/if}}>
-        <div class="batata-card-badge">{{ localize "BATATAOU_NAO.HUD.Protocol" }}</div>
-        <div class="batata-card-img">
-          <img src="modules/batata-ou-nao/assets/batata_premium.webp">
-        </div>
-        <div class="batata-card-text">
-          <h2>{{ localize "BATATAOU_NAO.Quality.High" }}</h2>
-          <p>{{ localize "BATATAOU_NAO.Quality.HighDescription" }}</p>
-        </div>
-      </div>
-
+      </article>
+      {{/each}}
     </div>
   </section>
 
-  <section class="batata-granular hud-box">
-    <div class="batata-section-header">
-      <h3>
-        <i class="fas fa-sliders"></i>
+  {{! ── GRANULAR CONTROLS ───────────────────────────────────── }}
+  <details class="batata-granular hud-box">
+    <summary class="batata-details-summary">
+      <span>
+        <i class="fas fa-sliders" aria-hidden="true"></i>
         {{ localize "BATATAOU_NAO.HUD.AdvancedOverrides" }}
-      </h3>
+      </span>
+    </summary>
 
-      <button type="button" class="batata-small-btn" data-action="reset-granular">
-        <i class="fas fa-rotate-left"></i>
-        {{ localize "BATATAOU_NAO.Dialog.Reset" }}
-      </button>
+    <div class="batata-granular-content">
+      <div class="batata-section-header">
+        <h3>{{ localize "BATATAOU_NAO.Dialog.Granular" }}</h3>
+
+        <button
+          type="button"
+          class="batata-small-btn"
+          data-action="reset-granular"
+        >
+          <i class="fas fa-rotate-left" aria-hidden="true"></i>
+          {{ localize "BATATAOU_NAO.Dialog.Reset" }}
+        </button>
+      </div>
+
+      <div class="batata-granular-list" role="list">
+        {{#each granular as |feature|}}
+        <div
+          class="batata-granular-row {{#unless feature.available}}batata-granular-unavailable{{/unless}}"
+          role="listitem"
+        >
+          <span
+            class="batata-granular-label"
+            id="batata-feature-label-{{ feature.id }}"
+          >
+            {{ feature.name }}
+          </span>
+
+          {{#if feature.isSelect}}
+            <select
+              class="batata-granular-select"
+              data-feature="{{ feature.id }}"
+              aria-labelledby="batata-feature-label-{{ feature.id }}"
+              {{#unless feature.available}}disabled aria-disabled="true"{{/unless}}
+            >
+              {{#each feature.options as |opt|}}
+                <option value="{{ opt.value }}" {{#if opt.selected}}selected{{/if}}>
+                  {{ opt.label }}
+                </option>
+              {{/each}}
+            </select>
+          {{else}}
+            <label class="batata-switch">
+              <input
+                type="checkbox"
+                {{#if feature.enabled}}checked{{/if}}
+                data-feature="{{ feature.id }}"
+                {{#unless feature.available}}disabled{{/unless}}
+                aria-labelledby="batata-feature-label-{{ feature.id }}"
+                aria-describedby="batata-impact-{{ feature.id }}"
+              >
+              <span class="batata-slider"></span>
+            </label>
+          {{/if}}
+
+          <span
+            class="batata-impact batata-impact-{{ feature.impact }}"
+            id="batata-impact-{{ feature.id }}"
+          >
+            {{ feature.impactLabel }}
+          </span>
+        </div>
+        {{/each}}
+      </div>
     </div>
+  </details>
 
-    {{#each granular as |feature|}}
-    <div class="batata-granular-row {{#unless feature.available}}batata-granular-unavailable{{/unless}}">
-      <span class="batata-granular-label">{{ feature.name }}</span>
-
-      {{#if feature.isSelect}}
-        <select class="batata-granular-select" data-feature="{{ feature.id }}" {{#unless feature.available}}disabled{{/unless}}>
-          {{#each feature.options as |opt|}}
-            <option value="{{ opt.value }}" {{#if opt.selected}}selected{{/if}}>{{ opt.label }}</option>
-          {{/each}}
-        </select>
-      {{else}}
-        <label class="batata-switch">
-          <input type="checkbox" {{#if feature.enabled}}checked{{/if}} data-feature="{{ feature.id }}" {{#unless feature.available}}disabled{{/unless}}>
-          <span class="batata-slider"></span>
-        </label>
-      {{/if}}
-
-      <span class="batata-impact batata-impact-{{ feature.impact }}">{{ feature.impactLabel }}</span>
-    </div>
-    {{/each}}
-  </section>
-
+  {{! ── LIVE MONITOR ────────────────────────────────────────── }}
   {{#if monitorActive}}
-  <section class="batata-monitor hud-box">
-    <div class="batata-section-title">
-      <i class="fas fa-heart-pulse"></i>
+  <section class="batata-monitor hud-box" aria-labelledby="batata-monitor-heading">
+    <div class="batata-section-title" id="batata-monitor-heading">
+      <i class="fas fa-heart-pulse" aria-hidden="true"></i>
       <span>{{ localize "BATATAOU_NAO.Dialog.Monitor" }}</span>
     </div>
 
-    <div class="batata-monitor-stats">
-      <div class="batata-stat">
-        <span class="batata-stat-value" data-monitor-current>{{ monitorCurrentFps }}</span>
-        <span class="batata-stat-label">FPS</span>
+    <div class="batata-monitor-layout">
+      <div
+        class="batata-monitor-stats"
+        role="group"
+        aria-label="{{ localize 'BATATAOU_NAO.HUD.MonitorStats' }}"
+      >
+        <div class="batata-stat">
+          <span class="batata-stat-value" data-monitor-current>
+            {{ monitorCurrentFps }}
+          </span>
+          <span class="batata-stat-label">FPS</span>
+        </div>
+
+        <div class="batata-stat">
+          <span class="batata-stat-value" data-monitor-avg>
+            {{ monitorAvgFps }}
+          </span>
+          <span class="batata-stat-label">
+            {{ localize "BATATAOU_NAO.Metric.Average" }}
+          </span>
+        </div>
       </div>
 
-      <div class="batata-stat">
-        <span class="batata-stat-value" data-monitor-avg>{{ monitorAvgFps }}</span>
-        <span class="batata-stat-label">{{ localize "BATATAOU_NAO.Metric.Average" }}</span>
+      <div
+        class="batata-monitor-graph"
+        role="img"
+        aria-label="{{ localize 'BATATAOU_NAO.HUD.MonitorGraphDesc' }}"
+      >
+        {{{ monitorGraphSvg }}}
       </div>
-    </div>
-
-    <div class="batata-monitor-graph" data-monitor-graph>
-      {{#if monitorGraph}}
-        {{{ monitorGraph }}}
-      {{/if}}
     </div>
   </section>
   {{/if}}
 
+  {{! ── FOOTER ──────────────────────────────────────────────── }}
   <footer class="form-footer batata-hud-footer">
-    <button type="submit" class="dialog-button" {{#unless benchmarkDone}}disabled{{/unless}}>
-      <i class="fas fa-check"></i>
+    <button
+      type="submit"
+      class="dialog-button batata-apply-btn"
+      {{#unless benchmarkDone}}disabled{{/unless}}
+      {{#if benchmarkRunning}}disabled{{/if}}
+    >
+      <i class="fas fa-check" aria-hidden="true"></i>
       {{ localize "BATATAOU_NAO.Dialog.Accept" }}
     </button>
   </footer>

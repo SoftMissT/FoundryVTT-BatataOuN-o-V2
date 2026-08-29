@@ -14,6 +14,22 @@ This project follows the spirit of [Keep a Changelog](https://keepachangelog.com
 
 ---
 
+## [1.0.11] - 2026-08-29
+
+### Fixed
+- Improved HUD readability with clearer contrast, spacing, and typography.
+- Added Orbitron and Rajdhani typography styling for the performance HUD.
+- Fixed benchmark Journal output formatting to avoid broken empty Markdown tables.
+- Added Markdown and JSON export actions for benchmark reports.
+- Updated the HUD template to use dynamic quality protocols.
+- Improved accessibility semantics for benchmark status, protocol cards, graphs, and action buttons.
+
+### Changed
+- Refactored the benchmark dialog layout for the new HUD v2 structure.
+- Updated localization keys for English, Portuguese, Spanish, Chinese, and Russian.
+- Prepared the release for `v1.0.11` as a patch over `v1.0.10`.
+
+
 ## [1.0.10] - 2026-08-29
 
 ### Added
