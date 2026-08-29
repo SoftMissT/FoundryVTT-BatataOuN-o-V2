@@ -32,7 +32,7 @@ jobs:
         shell: bash
         run: |
           rm -f module.zip
-          zip -r module.zip module.json LICENSE styles scripts templates languages
+          zip -r module.zip module.json LICENSE styles scripts templates languages assets
 
       - name: Create or update GitHub release
         env:

@@ -1,5 +1,5 @@
 /**
- * Monitor de performance — track FPS em tempo real e auto-degrada.
+ * Monitor de performance track FPS em tempo real e auto-degrada.
  * Um único ticker callback, limpo em stop e em canvasTearDown.
  * @module monitor
  */
@@ -36,7 +36,7 @@ const state = {
  */
 export function startMonitor(options = {}) {
   if (state.active) {
-    debugLog("startMonitor ignorado — já ativo");
+    debugLog("startMonitor ignorado já ativo");
     return;
   }
 

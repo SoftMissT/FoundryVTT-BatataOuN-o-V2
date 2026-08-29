@@ -24,6 +24,7 @@ import {
   toggleGranularFeature,
   resetGranular,
 } from "./granular.js";
+import { createBenchmarkJournalReport } from "./journal.js";
 
 export class PotatoOrNotAPI {
   get quality() {
@@ -100,4 +101,8 @@ export class PotatoOrNotAPI {
   resetFeatures(level) {
     resetGranular(level);
   }
+  async createBenchmarkJournal(benchmark = this.lastBenchmark, applySummary = null) {
+    return createBenchmarkJournalReport(benchmark, applySummary);
+  }
+
 }

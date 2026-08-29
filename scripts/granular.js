@@ -1,25 +1,30 @@
 /**
- * Controles granulares — switches individuais por feature pesada.
+ * Controles granulares switches individuais por feature pesada.
  * Estado reflete o valor REAL aplicado no cliente, não defaults internos.
  * @module granular
  */
 
 import { getSetting, setSetting, SETTING_KEYS } from "./settings.js";
-import { validateQualityLevel, debugLog, isSettingRegistered, deepClone } from "./utils.js";
+import {
+  validateQualityLevel,
+  debugLog,
+  isSettingRegistered,
+  deepClone,
+} from "./utils.js";
 
 /**
  * Definição de uma feature granular.
  * @typedef {Object} GranularFeature
  * @property {string} id
- * @property {string} name — chave de localização
+ * @property {string} name chave de localização
  * @property {string} category
- * @property {string} module — namespace do setting (geralmente "core")
- * @property {string} setting — key do setting no Foundry
- * @property {string[]} [keyCandidates] — keys alternativas se a principal não existir
+ * @property {string} module namespace do setting (geralmente "core")
+ * @property {string} setting key do setting no Foundry
+ * @property {string[]} [keyCandidates] keys alternativas se a principal não existir
  * @property {any} defaultValueOn
  * @property {any} defaultValueOff
  * @property {string} impact
- * @property {string} [type] — "select" para opções múltiplas
+ * @property {string} [type] "select" para opções múltiplas
  * @property {Array<{value: any, label: string}>} [options]
  */
 
@@ -138,7 +143,10 @@ function _readRealValue(feature) {
     seen.add(key);
     if (isSettingRegistered(feature.module, key)) {
       try {
-        return { value: game.settings.get(feature.module, key), available: true };
+        return {
+          value: game.settings.get(feature.module, key),
+          available: true,
+        };
       } catch {
         /* tenta próxima */
       }
@@ -148,7 +156,7 @@ function _readRealValue(feature) {
 }
 
 /**
- * Estado atual das features — reflete o valor real do cliente.
+ * Estado atual das features reflete o valor real do cliente.
  * Override custom do usuário > valor real do Foundry > default.
  * @returns {Array<GranularFeature & { currentValue: any, enabled: boolean, available: boolean }>}
  */
@@ -163,15 +171,20 @@ export function getGranularState() {
 
     // Prioridade: override custom > valor real aplicado > default
     const currentValue =
-      customValue !== undefined ? customValue : real.value !== undefined ? real.value : feature.defaultValueOn;
+      customValue !== undefined
+        ? customValue
+        : real.value !== undefined
+          ? real.value
+          : feature.defaultValueOn;
 
     return {
       ...feature,
       currentValue,
       available: real.available,
-      enabled: feature.type === "select"
-        ? true
-        : currentValue !== feature.defaultValueOff,
+      enabled:
+        feature.type === "select"
+          ? true
+          : currentValue !== feature.defaultValueOff,
     };
   });
 }
@@ -226,19 +239,19 @@ export function applyGranular(level) {
   const customMap = getSetting(SETTING_KEYS.SETTINGS_MAP) ?? {};
   const levelOverrides = customMap[level] ?? {};
 
-  return GRANULAR_FEATURES.filter((f) => f.type !== "select" || f.id === "maxFPS").map(
-    (feature) => {
-      const value =
-        levelOverrides[feature.module]?.[feature.setting] ??
-        feature.defaultValueOn;
-      return {
-        module: feature.module,
-        setting: feature.setting,
-        value,
-        candidates: feature.keyCandidates,
-      };
-    }
-  );
+  return GRANULAR_FEATURES.filter(
+    (f) => f.type !== "select" || f.id === "maxFPS",
+  ).map((feature) => {
+    const value =
+      levelOverrides[feature.module]?.[feature.setting] ??
+      feature.defaultValueOn;
+    return {
+      module: feature.module,
+      setting: feature.setting,
+      value,
+      candidates: feature.keyCandidates,
+    };
+  });
 }
 
 /**
@@ -262,10 +275,13 @@ function _applySingleFeature(feature, value) {
       game.settings
         .set(feature.module, key, value)
         .catch((err) =>
-          console.error(`BatataOuNao | Falha em ${feature.module}.${key}:`, err)
+          console.error(
+            `BatataOuNao | Falha em ${feature.module}.${key}:`,
+            err,
+          ),
         );
       return;
     }
   }
-  debugLog(`Feature ${feature.id}: nenhum setting registrado — pulado`);
+  debugLog(`Feature ${feature.id}: nenhum setting registrado pulado`);
 }

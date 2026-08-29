@@ -1,161 +1,158 @@
-# Batata Ou Não
+<p align="center">
+  <img src="assets/banner.webp" alt="Batata Ou Não" width="100%">
+</p>
 
-**Batata Ou Não** é um módulo para Foundry VTT focado em **diagnóstico e ajuste real de performance do cliente**.
+<h1 align="center">Batata Ou Não</h1>
 
-Ele não promete milagre. Ele mede o estado do canvas, identifica gargalos prováveis e aplica perfis de qualidade mais seguros para reduzir custo de renderização em cenas pesadas.
+<p align="center">
+  <strong>Real client-side performance diagnostics for Foundry VTT.</strong>
+</p>
 
-> Reescrito a partir do conceito do PotatoOrNot para uma versão mais prática, com benchmark, monitoramento e presets granulares para Foundry VTT moderno.
+<p align="center">
+  <a href="https://github.com/SoftMissT/FoundryVTT-BatataOuN-o-V2/releases/latest">
+    <img src="https://img.shields.io/github/v/release/SoftMissT/FoundryVTT-BatataOuN-o-V2?label=release" alt="Latest release">
+  </a>
+  <img src="https://img.shields.io/badge/Foundry%20VTT-v13.350%20%E2%86%92%20v14.999-orange" alt="Foundry VTT compatibility">
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT license">
+</p>
 
----
-
-## Objetivo
-
-Foundry VTT roda sobre canvas WebGL. Mesmo em uma máquina forte, uma cena pode ficar pesada por causa de:
-
-- muitos efeitos de luz;
-- visão dinâmica;
-- animações de token/luz;
-- mapas ou vídeos grandes;
-- módulos com hooks pesados;
-- assets não otimizados;
-- aceleração por hardware desligada;
-- navegador ou Windows usando a GPU errada.
-
-Este módulo existe para ajudar o usuário a responder:
-
-> "Meu Foundry está rodando bem ou está virando batata?"
+<p align="center">
+  <a href="#english">English</a> ·
+  <a href="#português-brasil">Português Brasil</a>
+</p>
 
 ---
 
-## Status do projeto
+# English
 
-Este módulo está em fase de estabilização.
+## About
 
-Prioridades atuais:
+**Batata Ou Não** is a Foundry VTT module that benchmarks the current client, detects likely rendering bottlenecks, and recommends safer visual presets.
 
-- corrigir o monitor de FPS em tempo real;
-- tornar o benchmark resistente quando `canvas.fps.render` não estiver disponível;
-- validar settings core antes de aplicar;
-- evitar hooks/tickers duplicados;
-- melhorar a documentação de release;
-- impedir releases/tags quebradas.
+It measures the canvas, checks WebGL/GPU information, estimates scene weight, and helps users choose a quality profile that better matches their machine.
 
----
+## Features
 
-## O que o módulo faz
+- Real client-side benchmark.
+- FPS, frametime, p95/p99, 1% low FPS, stutter and long-frame metrics.
+- GPU and WebGL renderer detection.
+- Scene weight estimation.
+- Dark diagnostic HUD with SVG performance graphs.
+- Quality presets: Potato, Good Potato and Premium.
+- Granular visual controls.
+- Performance monitor.
+- Journal report generation.
+- Five languages: English, Português Brasil, Español, 中文（简体）, Русский.
 
-### Benchmark
+## Compatibility
 
-O benchmark coleta informações do ambiente gráfico e tenta medir FPS real do canvas.
+| Foundry VTT | Status            |
+| :---------- | :---------------- |
+| v13.350+    | Minimum supported |
+| v14.x       | Verified          |
+| v15+        | Not verified      |
 
-Ele considera:
+## Installation
 
-- GPU detectada via WebGL;
-- renderer WebGL;
-- capacidades como textura máxima e renderbuffer;
-- FPS médio durante uma janela de teste;
-- qualidade recomendada para o cliente atual.
+In Foundry VTT:
 
-Se o FPS não puder ser medido de forma confiável, o módulo informa isso claramente. `0 FPS` não é tratado como diagnóstico real de performance o painel mostra **"FPS indisponível"** e nenhuma recomendação é gerada sem medição válida.
+1. Open **Add-on Modules**.
+2. Click **Install Module**.
+3. Paste this manifest URL:
 
----
+```text
+https://github.com/SoftMissT/FoundryVTT-BatataOuN-o-V2/releases/latest/download/module.json
+```
 
-### Monitor de Performance
+4. Enable the module in your world.
 
-O monitor acompanha o FPS do canvas durante a sessão.
+## Recommended use
 
-Objetivo do monitor:
+1. Open a real scene from your world.
+2. Open **Batata Ou Não** from the module settings.
+3. Run the benchmark.
+4. Review the score, FPS, frametime, stutter and scene weight.
+5. Apply the recommended preset.
+6. Adjust granular controls if needed.
+7. Generate a Journal report to save the result.
 
-- mostrar FPS atual;
-- mostrar FPS médio;
-- detectar queda persistente;
-- sugerir ou aplicar downgrade de qualidade;
-- evitar ajuste agressivo a cada frame;
-- manter cooldown entre mudanças.
+## Quality presets
 
-O monitor é leve: um único ticker callback, publicação de amostra no máximo 1x por segundo, sem spam no console e sem rerender da interface a cada frame.
+| Preset      | Intended use                          |
+| :---------- | :------------------------------------ |
+| Potato      | Weak hardware, laptops, heavy scenes  |
+| Good Potato | Balanced default for most users       |
+| Premium     | Strong hardware and controlled scenes |
 
----
+## Known limitations
 
-### Presets de Qualidade
+This module is a diagnostic and tuning layer, not a universal performance fix.
 
-O módulo trabalha com três perfis:
+It cannot fully solve oversized maps or videos, too many active modules, excessive lights/walls/tokens/tiles, disabled hardware acceleration, wrong GPU selection by the operating system, network/hosting issues, or heavy automation from game systems and other modules.
 
-| Perfil     | Uso recomendado                       | Intenção                                  |
-| ---------- | ------------------------------------- | ----------------------------------------- |
-| Batata     | hardware fraco, notebook, cena pesada | reduzir custo visual ao máximo            |
-| Batata Boa | maioria dos usuários                  | equilíbrio entre qualidade e estabilidade |
-| Premium    | máquina forte e cena controlada       | manter qualidade alta                     |
+## Public API
 
-Os presets atuam sobre configurações de performance do Foundry, como:
+When the module is loaded, the API is available at:
 
-- modo de performance;
-- FPS máximo;
-- sombras suaves;
-- mipmap;
-- MSAA;
-- SMAA;
-- animações de luz;
-- animações de visão;
-- modo fotosensível quando aplicável.
+```js
+window.PotatoOrNot;
+```
 
-Settings que não existirem na versão do Foundry são **pulados com segurança** o módulo nunca quebra por setting ausente.
+Examples:
 
----
+```js
+// Current quality level
+PotatoOrNot.quality;
 
-## Controles Granulares
+// Run benchmark
+const result = await PotatoOrNot.benchmark(6000);
 
-Cada usuário pode ajustar recursos individuais.
+// Apply quality level
+await PotatoOrNot.setQuality(1);
 
-| Controle           | Impacto esperado                      |
-| ------------------ | ------------------------------------- |
-| Sombras suaves     | reduz custo de luzes e blur           |
-| MSAA               | reduz custo de antialiasing           |
-| SMAA               | reduz custo de antialiasing           |
-| Mipmap             | altera tratamento de texturas em zoom |
-| Animações de luz   | reduz custo de efeitos animados       |
-| Animações de visão | reduz custo de atualização visual     |
-| FPS máximo         | limita consumo de CPU/GPU             |
-| Modo fotosensível  | reduz flashes e efeitos agressivos    |
+// Create a Journal report from the last benchmark
+await PotatoOrNot.createJournalReport();
 
-Os controles granulares refletem o **estado real aplicado no cliente** o valor mostrado é lido diretamente das settings do Foundry, não de defaults internos.
+// Monitor
+PotatoOrNot.startMonitor({ autoAdjust: true });
+PotatoOrNot.stopMonitor();
+PotatoOrNot.monitor;
 
----
-
-## O que este módulo NÃO faz
-
-Este módulo não substitui boas práticas de otimização de world.
-
-Ele não consegue resolver sozinho:
-
-- mapas gigantes em PNG;
-- vídeos enormes;
-- dezenas de módulos pesados ativos;
-- cenas com excesso de paredes, luzes e tokens;
-- navegador sem aceleração por hardware;
-- Windows usando GPU integrada em vez da dedicada;
-- problemas de rede ou upload do host;
-- sistema de jogo com automações muito pesadas.
-
-Use o módulo como diagnóstico e camada de ajuste, não como cura universal.
+// GPU / WebGL
+PotatoOrNot.getGPU();
+PotatoOrNot.getGLInfo();
+```
 
 ---
 
-## Checklist de otimização real
+# Português Brasil
 
-Antes de culpar o hardware, verifique:
+## Sobre
 
-- [ ] Aceleração por hardware está ativa no navegador ou app Foundry.
-- [ ] Windows está usando a GPU dedicada para o Foundry/browser.
-- [ ] O mundo foi testado com módulos desativados.
-- [ ] A cena usa assets WebP/WebM quando possível.
-- [ ] Vídeos foram exportados com FPS e bitrate razoáveis.
-- [ ] Luzes animadas foram reduzidas.
-- [ ] Visão dinâmica foi testada em cena pesada.
-- [ ] O FPS máximo foi limitado para clientes fracos.
-- [ ] O monitor do Batata Ou Não mostra FPS real, não "0" por falha de medição.
+**Batata Ou Não** é um módulo para Foundry VTT que mede a performance real do cliente, detecta gargalos prováveis de renderização e recomenda presets visuais mais seguros.
 
----
+Ele mede o canvas, verifica informações de GPU/WebGL, estima o peso da cena e ajuda o usuário a escolher um perfil de qualidade mais adequado para a máquina atual.
+
+## Recursos
+
+- Benchmark real do cliente.
+- Métricas de FPS, frametime, p95/p99, 1% low FPS, stutter e frames longos.
+- Detecção de GPU e renderer WebGL.
+- Estimativa de peso da cena.
+- HUD dark de diagnóstico com gráficos SVG.
+- Presets de qualidade: Batata, Batata Boa e Premium.
+- Controles visuais granulares.
+- Monitor de performance.
+- Geração de relatório no Journal.
+- Cinco idiomas: English, Português Brasil, Español, 中文（简体）, Русский.
+
+## Compatibilidade
+
+| Foundry VTT | Status           |
+| :---------- | :--------------- |
+| v13.350+    | Mínimo suportado |
+| v14.x       | Verificado       |
+| v15+        | Não verificado   |
 
 ## Instalação
 
@@ -171,23 +168,29 @@ https://github.com/SoftMissT/FoundryVTT-BatataOuN-o-V2/releases/latest/download/
 
 4. Ative o módulo no mundo.
 
----
+## Uso recomendado
 
-## Uso
-
-Abra o painel do módulo nas configurações.
-
-Fluxo recomendado:
-
-1. Abra uma cena real da sua mesa.
-2. Rode o benchmark.
-3. Verifique FPS atual e FPS médio.
-4. Aplique o preset recomendado.
-5. Teste movimento, visão, luzes e animações.
+1. Abra uma cena real do seu mundo.
+2. Abra **Batata Ou Não** nas configurações do módulo.
+3. Rode o benchmark.
+4. Verifique score, FPS, frametime, stutter e peso da cena.
+5. Aplique o preset recomendado.
 6. Ajuste controles granulares se necessário.
-7. Compare antes/depois.
+7. Gere um relatório no Journal para salvar o resultado.
 
----
+## Presets de qualidade
+
+| Preset     | Uso recomendado                                |
+| :--------- | :--------------------------------------------- |
+| Batata     | Hardware fraco, notebook ou cena pesada        |
+| Batata Boa | Perfil equilibrado para a maioria dos usuários |
+| Premium    | Hardware forte e cenas controladas             |
+
+## Limitações conhecidas
+
+Este módulo é uma camada de diagnóstico e ajuste, não uma solução universal de performance.
+
+Ele não resolve sozinho mapas ou vídeos grandes demais, excesso de módulos ativos, excesso de luzes/paredes/tokens/tiles, aceleração por hardware desligada, sistema operacional usando a GPU errada, problemas de rede/hospedagem ou automações pesadas de sistemas e outros módulos.
 
 ## API pública
 
@@ -200,14 +203,17 @@ window.PotatoOrNot;
 Exemplos:
 
 ```js
-// Nível atual
+// Nível de qualidade atual
 PotatoOrNot.quality;
 
-// Aplicar qualidade
+// Rodar benchmark
+const result = await PotatoOrNot.benchmark(6000);
+
+// Aplicar nível de qualidade
 await PotatoOrNot.setQuality(1);
 
-// Rodar benchmark
-const result = await PotatoOrNot.benchmark(3000);
+// Criar relatório Journal do último benchmark
+await PotatoOrNot.createJournalReport();
 
 // Monitor
 PotatoOrNot.startMonitor({ autoAdjust: true });
@@ -221,55 +227,6 @@ PotatoOrNot.getGLInfo();
 
 ---
 
-## Hooks
-
-| Hook                           | Quando                        |
-| ------------------------------ | ----------------------------- |
-| `BatataOuNaoReady`             | módulo terminou inicialização |
-| `BatataOuNaoBenchmarkComplete` | benchmark terminou            |
-| `BatataOuNaoQualityApplied`    | preset foi aplicado           |
-| `BatataOuNaoMonitorTick`       | monitor publicou nova amostra |
-| `BatataOuNaoAutoDegrade`       | monitor reduziu qualidade     |
-| `BatataOuNaoAutoUpgrade`       | monitor aumentou qualidade    |
-
----
-
-## Desenvolvimento
-
-Estrutura principal:
-
-```text
-scripts/
-  main.js          entrada do módulo
-  settings.js      registro e leitura de settings
-  quality.js       presets de qualidade
-  benchmark.js     GPU/WebGL/FPS benchmark
-  monitor.js       coleta de FPS e auto-ajuste
-  granular.js      controles individuais
-  application.js   interface ApplicationV2
-  api.js           API pública
-  utils.js         helpers defensivos
-```
-
----
-
-## Regras de release
-
-Este projeto usa releases GitHub com assets:
-
-- `module.json`
-- `module.zip`
-
-Regras:
-
-- `module.json.version` deve bater com a tag.
-- A tag deve seguir `vX.Y.Z`.
-- `module.zip` é artefato de release e não deve ser commitado.
-- Releases antigas não devem ser apagadas para corrigir erro.
-- Correção de release deve gerar nova versão patch.
-
----
-
-## Licença
+## License / Licença
 
 MIT

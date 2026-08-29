@@ -1,11 +1,16 @@
 /**
- * Batata Ou Nao — Entry Point
+ * Batata Ou Nao Entry Point
  * Modulo Foundry VTT v14+ para diagnostico e ajuste real de performance.
  *
  * @module main
  */
 
-import { registerSettings, getSetting, setSetting, SETTING_KEYS } from "./settings.js";
+import {
+  registerSettings,
+  getSetting,
+  setSetting,
+  SETTING_KEYS,
+} from "./settings.js";
 import { applyQuality, getCurrentQuality } from "./quality.js";
 import { PotatoDialog } from "./application.js";
 import { PotatoOrNotAPI } from "./api.js";
