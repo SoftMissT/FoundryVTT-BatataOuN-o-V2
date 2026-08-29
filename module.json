@@ -2,7 +2,7 @@
   "id": "batata-ou-nao",
   "title": "Batata Ou Não",
   "description": "Detecta se o computador do jogador é uma batata e configura os gráficos automaticamente para a melhor experiência possível.",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "compatibility": {
     "minimum": "13.350",
     "verified": "14",
@@ -14,8 +14,12 @@
       "url": "https://github.com/SoftMissT"
     }
   ],
-  "esmodules": ["scripts/main.js"],
-  "styles": ["styles/potato.css"],
+  "esmodules": [
+    "scripts/main.js"
+  ],
+  "styles": [
+    "styles/potato.css"
+  ],
   "languages": [
     {
       "lang": "pt-BR",

@@ -1,6 +1,6 @@
 /**
  * ApplicationV2 Diálogo integrado.
- * Monitor atualiza o DOM via BatataOuNaoMonitorTick (1x/s), sem rerender.
+ * Monitor atualiza o DOM via BatataOuNaoMonitorTick sem rerender pesado.
  *
  * @module application
  */
@@ -15,7 +15,11 @@ import {
   resetGranular,
 } from "./granular.js";
 import { getMonitorState, getFpsHistory } from "./monitor.js";
-import { createBenchmarkJournalReport } from "./journal.js";
+import {
+  createBenchmarkJournalReport,
+  exportBenchmarkMarkdown,
+  exportBenchmarkJson,
+} from "./journal.js";
 
 /**
  * Localiza texto com fallback seguro.
@@ -34,7 +38,7 @@ function t(key, fallback) {
 }
 
 /**
- * Dispara notificação sem quebrar caso a UI não esteja pronta.
+ * Notificação defensiva.
  *
  * @param {"info"|"warn"|"error"} type
  * @param {string} key
@@ -49,7 +53,7 @@ function notify(type, key, fallback) {
 }
 
 /**
- * Refit seguro da janela ApplicationV2 depois de mudanças de conteúdo.
+ * Refit seguro da janela ApplicationV2.
  *
  * @param {foundry.applications.api.ApplicationV2} app
  */
@@ -67,199 +71,6 @@ function refitSoon(app) {
  * @param {number|null|undefined} level
  * @returns {string|null}
  */
-
-const GRAPH_WIDTH = 360;
-const GRAPH_HEIGHT = 96;
-const GRAPH_PADDING = 10;
-
-const GRAPH_COLORS = {
-  body: "#C1000C",
-  mind: "#FF93FF",
-  spirit: "#0EF5FF",
-  gold: "#F8EB4D",
-  lime: "#A4FE23",
-};
-
-/**
- * Monta SVGs seguros a partir das amostras numéricas do benchmark.
- * Não usa dados externos ou HTML fornecido pelo usuário.
- *
- * @param {Object|null} result
- * @returns {{fps: string|null, frameMs: string|null, quality: string|null}}
- */
-function buildBenchmarkGraphs(result) {
-  const samples = result?.samples ?? result?.baseline?.samples;
-
-  return {
-    fps: buildSparklineSvg(samples?.fps, {
-      label: "FPS",
-      color: GRAPH_COLORS.body,
-      min: 0,
-      preferredMax: 60,
-      higherIsBetter: true,
-    }),
-    frameMs: buildSparklineSvg(samples?.frameMs, {
-      label: "Frame Time",
-      color: GRAPH_COLORS.mind,
-      min: 0,
-      preferredMax: 50,
-      higherIsBetter: false,
-      suffix: "ms",
-    }),
-    quality: buildFrameQualitySvg(samples?.quality, {
-      label: "Frame Quality",
-    }),
-  };
-}
-
-/**
- * Sparkline SVG inline.
- *
- * @param {number[]|undefined|null} rawValues
- * @param {{
- *   label: string,
- *   color: string,
- *   min?: number,
- *   preferredMax?: number,
- *   higherIsBetter?: boolean,
- *   suffix?: string
- * }} options
- * @returns {string|null}
- */
-function buildSparklineSvg(rawValues, options) {
-  const values = sanitizeNumericSeries(rawValues);
-  if (values.length < 2) return null;
-
-  const min = Number.isFinite(options.min)
-    ? options.min
-    : Math.min(...values);
-
-  const rawMax = Math.max(...values, options.preferredMax ?? -Infinity);
-  const max = rawMax <= min ? min + 1 : rawMax;
-  const width = GRAPH_WIDTH;
-  const height = GRAPH_HEIGHT;
-  const pad = GRAPH_PADDING;
-
-  const points = values.map((value, index) => {
-    const x = pad + (index / Math.max(1, values.length - 1)) * (width - pad * 2);
-    const ratio = (clamp(value, min, max) - min) / (max - min);
-    const y = height - pad - ratio * (height - pad * 2);
-
-    return `${round(x, 2)},${round(y, 2)}`;
-  });
-
-  const path = points
-    .map((point, index) => `${index === 0 ? "M" : "L"} ${point}`)
-    .join(" ");
-
-  const last = values[values.length - 1];
-  const avg = average(values);
-  const peak = Math.max(...values);
-
-  return `
-    <svg class="batata-sparkline" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(options.label)}">
-      <rect class="batata-spark-bg" x="0" y="0" width="${width}" height="${height}" rx="10"></rect>
-      <path class="batata-spark-grid" d="M ${pad} ${height * 0.25} H ${width - pad} M ${pad} ${height * 0.5} H ${width - pad} M ${pad} ${height * 0.75} H ${width - pad}"></path>
-      <path class="batata-spark-area" d="${path} L ${width - pad},${height - pad} L ${pad},${height - pad} Z" style="fill: ${hexToRgba(options.color, 0.12)}"></path>
-      <path class="batata-spark-line" d="${path}" style="stroke: ${options.color}"></path>
-      <circle class="batata-spark-last" cx="${points[points.length - 1].split(",")[0]}" cy="${points[points.length - 1].split(",")[1]}" r="3.5" style="fill: ${options.color}"></circle>
-      <text class="batata-spark-meta" x="${pad}" y="${height - 6}">avg ${round(avg, 1)}${options.suffix ?? ""}</text>
-      <text class="batata-spark-meta batata-spark-meta-right" x="${width - pad}" y="${height - 6}">now ${round(last, 1)}${options.suffix ?? ""} · max ${round(peak, 1)}${options.suffix ?? ""}</text>
-    </svg>
-  `;
-}
-
-/**
- * Barras de qualidade dos frames:
- * 0 = estável, 1 = stutter, 2 = frame longo.
- *
- * @param {number[]|undefined|null} rawValues
- * @param {{label: string}} options
- * @returns {string|null}
- */
-function buildFrameQualitySvg(rawValues, options) {
-  const values = Array.isArray(rawValues)
-    ? rawValues.filter((value) => Number.isFinite(value)).map((value) => clamp(Math.round(value), 0, 2))
-    : [];
-
-  if (values.length < 2) return null;
-
-  const width = GRAPH_WIDTH;
-  const height = GRAPH_HEIGHT;
-  const pad = GRAPH_PADDING;
-  const gap = 2;
-  const barWidth = Math.max(2, (width - pad * 2 - gap * (values.length - 1)) / values.length);
-
-  const rects = values
-    .map((value, index) => {
-      const x = pad + index * (barWidth + gap);
-      const barHeight = value === 0 ? 28 : value === 1 ? 56 : 78;
-      const y = height - pad - barHeight;
-      const cls = value === 0 ? "is-good" : value === 1 ? "is-warn" : "is-bad";
-
-      return `<rect class="batata-frame-bar ${cls}" x="${round(x, 2)}" y="${round(y, 2)}" width="${round(barWidth, 2)}" height="${barHeight}" rx="2"></rect>`;
-    })
-    .join("");
-
-  const stable = values.filter((value) => value === 0).length;
-  const warn = values.filter((value) => value === 1).length;
-  const bad = values.filter((value) => value === 2).length;
-
-  return `
-    <svg class="batata-frame-bars" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(options.label)}">
-      <rect class="batata-spark-bg" x="0" y="0" width="${width}" height="${height}" rx="10"></rect>
-      <path class="batata-spark-grid" d="M ${pad} ${height * 0.33} H ${width - pad} M ${pad} ${height * 0.66} H ${width - pad}"></path>
-      ${rects}
-      <text class="batata-spark-meta" x="${pad}" y="${height - 6}">stable ${stable}</text>
-      <text class="batata-spark-meta batata-spark-meta-right" x="${width - pad}" y="${height - 6}">stutter ${warn} · long ${bad}</text>
-    </svg>
-  `;
-}
-
-function sanitizeNumericSeries(values) {
-  return Array.isArray(values)
-    ? values.filter((value) => Number.isFinite(value)).slice(-90)
-    : [];
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-}
-
-function hexToRgba(hex, alpha) {
-  const clean = String(hex).replace("#", "");
-  const parsed = Number.parseInt(clean, 16);
-
-  if (!Number.isFinite(parsed)) return `rgba(255, 255, 255, ${alpha})`;
-
-  const r = (parsed >> 16) & 255;
-  const g = (parsed >> 8) & 255;
-  const b = parsed & 255;
-
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-function average(values) {
-  if (!values.length) return 0;
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
-}
-
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
-
-function round(value, digits = 2) {
-  if (!Number.isFinite(value)) return 0;
-
-  const factor = 10 ** digits;
-  return Math.round(value * factor) / factor;
-}
-
-
 function qualityLabel(level) {
   if (level === null || level === undefined) return null;
 
@@ -269,12 +80,223 @@ function qualityLabel(level) {
   return t(key, key);
 }
 
+/**
+ * Escapa texto para uso em SVG inline.
+ *
+ * @param {string|number|null|undefined} value
+ * @returns {string}
+ */
+function escapeSvg(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+/**
+ * Número finito ou null.
+ *
+ * @param {unknown} value
+ * @returns {number|null}
+ */
+function finiteNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+/**
+ * Cria sparkline SVG leve.
+ *
+ * @param {unknown[]} values
+ * @param {Object} options
+ * @param {string} options.label
+ * @param {string} options.color
+ * @param {boolean} [options.invert=false]
+ * @returns {string}
+ */
+function createSparklineSvg(values, { label, color, invert = false }) {
+  const numbers = values.map(finiteNumber).filter((value) => value !== null);
+
+  if (numbers.length < 2) {
+    return `
+      <svg class="batata-sparkline-svg is-empty" viewBox="0 0 320 96" role="img" aria-label="${escapeSvg(label)}">
+        <rect class="batata-sparkline-bg" x="0" y="0" width="320" height="96" rx="12"></rect>
+        <text class="batata-sparkline-empty" x="160" y="52" text-anchor="middle">${escapeSvg(
+          t("BATATAOU_NAO.HUD.NoGraphData", "Sem dados suficientes"),
+        )}</text>
+      </svg>
+    `;
+  }
+
+  const min = Math.min(...numbers);
+  const max = Math.max(...numbers);
+  const range = max - min || 1;
+
+  const width = 320;
+  const height = 96;
+  const padX = 12;
+  const padY = 14;
+  const innerW = width - padX * 2;
+  const innerH = height - padY * 2;
+
+  const points = numbers
+    .map((value, index) => {
+      const x =
+        padX +
+        (numbers.length === 1 ? 0 : (index / (numbers.length - 1)) * innerW);
+
+      const normalized = (value - min) / range;
+
+      const y = invert
+        ? padY + normalized * innerH
+        : padY + (1 - normalized) * innerH;
+
+      return `${x.toFixed(2)},${y.toFixed(2)}`;
+    })
+    .join(" ");
+
+  const current = numbers[numbers.length - 1];
+  const avg = numbers.reduce((sum, value) => sum + value, 0) / numbers.length;
+
+  return `
+    <svg class="batata-sparkline-svg" viewBox="0 0 320 96" role="img" aria-label="${escapeSvg(label)}">
+      <rect class="batata-sparkline-bg" x="0" y="0" width="320" height="96" rx="12"></rect>
+      <path class="batata-sparkline-grid" d="M12 24H308 M12 48H308 M12 72H308 M80 10V86 M160 10V86 M240 10V86"></path>
+      <polyline
+        class="batata-sparkline-line"
+        points="${points}"
+        fill="none"
+        stroke="${escapeSvg(color)}"
+        stroke-width="3"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      ></polyline>
+      <text class="batata-sparkline-label" x="14" y="18">${escapeSvg(label)}</text>
+      <text class="batata-sparkline-value" x="306" y="18" text-anchor="end">${escapeSvg(
+        Math.round(current * 100) / 100,
+      )}</text>
+      <text class="batata-sparkline-meta" x="306" y="88" text-anchor="end">avg ${escapeSvg(
+        Math.round(avg * 100) / 100,
+      )}</text>
+    </svg>
+  `;
+}
+
+/**
+ * Extrai arrays de amostras com compatibilidade entre formatos.
+ *
+ * @param {Object|null} benchmark
+ * @returns {{ fps: number[], frameMs: number[], quality: number[] }}
+ */
+function extractBenchmarkSamples(benchmark) {
+  if (!benchmark) return { fps: [], frameMs: [], quality: [] };
+
+  const samples = benchmark.samples ?? benchmark.chart ?? {};
+
+  const fps = samples.fps ?? samples.fpsSamples ?? benchmark.fpsSamples ?? [];
+
+  const frameMs =
+    samples.frameMs ??
+    samples.frameSamples ??
+    samples.frameMsSamples ??
+    benchmark.frameMsSamples ??
+    [];
+
+  const quality =
+    samples.quality ??
+    samples.qualitySamples ??
+    samples.stutter ??
+    samples.stutterSamples ??
+    benchmark.qualitySamples ??
+    [];
+
+  return {
+    fps: Array.isArray(fps) ? fps : [],
+    frameMs: Array.isArray(frameMs) ? frameMs : [],
+    quality: Array.isArray(quality) ? quality : [],
+  };
+}
+
+/**
+ * Cria contexto gráfico para a HUD.
+ *
+ * @param {Object|null} benchmark
+ * @returns {Object}
+ */
+function buildBenchmarkGraphs(benchmark) {
+  const samples = extractBenchmarkSamples(benchmark);
+
+  const fallbackFps = benchmark?.fpsAvailable
+    ? [benchmark.fps, benchmark.fps]
+    : [];
+
+  const fallbackFrame = benchmark?.avgFrameMs
+    ? [benchmark.avgFrameMs, benchmark.avgFrameMs]
+    : [];
+
+  const fallbackQuality =
+    benchmark?.stutterPct !== undefined && benchmark?.stutterPct !== null
+      ? [benchmark.stutterPct, benchmark.stutterPct]
+      : [];
+
+  const fpsValues = samples.fps.length ? samples.fps : fallbackFps;
+  const frameValues = samples.frameMs.length ? samples.frameMs : fallbackFrame;
+  const qualityValues = samples.quality.length
+    ? samples.quality
+    : fallbackQuality;
+
+  return {
+    available:
+      fpsValues.length >= 2 ||
+      frameValues.length >= 2 ||
+      qualityValues.length >= 2,
+
+    fpsSvg: createSparklineSvg(fpsValues, {
+      label: "FPS",
+      color: "#C1000C",
+    }),
+
+    frameSvg: createSparklineSvg(frameValues, {
+      label: t("BATATAOU_NAO.Metric.AvgFrame", "Frame médio"),
+      color: "#FF93FF",
+      invert: true,
+    }),
+
+    qualitySvg: createSparklineSvg(qualityValues, {
+      label: t("BATATAOU_NAO.Metric.Stutter", "Stutter"),
+      color: "#0EF5FF",
+      invert: true,
+    }),
+  };
+}
+
+/**
+ * Cria gráfico vivo do monitor.
+ *
+ * @returns {string}
+ */
+function buildMonitorGraphSvg() {
+  let history = [];
+
+  try {
+    history = getFpsHistory();
+  } catch {
+    history = [];
+  }
+
+  return createSparklineSvg(history, {
+    label: "FPS",
+    color: "#A4FE23",
+  });
+}
+
 export class PotatoDialog extends foundry.applications.api.HandlebarsApplicationMixin(
   foundry.applications.api.ApplicationV2,
 ) {
   static DEFAULT_OPTIONS = {
     id: "batata-ou-nao-dialog",
-    width: 680,
+    width: 1180,
     height: "auto",
     window: {
       contentClasses: ["standard-form"],
@@ -300,8 +322,10 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
   #benchmarkRunning = false;
   #benchmarkDone = Boolean(getSetting(SETTING_KEYS.BENCHMARK_RESULT));
   #overrideConfirmed = false;
-  #journalCreating = false;
   #tickHandler = null;
+  #lastApplySummary = null;
+  #exportRunning = false;
+  #journalRunning = false;
 
   async _prepareContext() {
     const gpu = detectGPU();
@@ -321,26 +345,20 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
         }
       : null;
 
-    const monitorGraph = buildSparklineSvg(getFpsHistory(), {
-      label: "Live FPS",
-      color: GRAPH_COLORS.spirit,
-      min: 0,
-      preferredMax: 60,
-      higherIsBetter: true,
-    });
-
     return {
       selectedLevel: this.#selectedLevel,
+      protocols: this.#buildProtocolsContext(),
       gpu: gpu.renderer,
       benchmark,
       benchmarkRunning: this.#benchmarkRunning,
       benchmarkDone: this.#benchmarkDone,
-      journalCreating: this.#journalCreating,
+      exportRunning: this.#exportRunning,
+      journalRunning: this.#journalRunning,
       granular,
       monitorActive: monitor.active,
       monitorCurrentFps: monitor.currentFps,
       monitorAvgFps: monitor.avgFps,
-      monitorGraph,
+      monitorGraphSvg: buildMonitorGraphSvg(),
     };
   }
 
@@ -349,120 +367,18 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
 
     refitSoon(this);
 
-    // Cards de nível
-    this.element.querySelectorAll(".batata-card").forEach((el) => {
-      el.addEventListener("click", (e) => {
-        e.preventDefault();
+    this.#bindQualityCards();
+    this.#bindBenchmarkButton();
+    this.#bindJournalButtons();
+    this.#bindGranularControls();
+    this.#bindSubmitGate();
+    this.#bindMonitorTick();
 
-        this.element.querySelectorAll(".batata-card").forEach((card) => {
-          card.removeAttribute("active");
-          card.classList.remove("active");
-        });
-
-        el.setAttribute("active", "true");
-        el.classList.add("active");
-
-        this.#selectedLevel = Number(el.dataset.level);
-        this.#overrideConfirmed = false;
-      });
-    });
-
-    // Benchmark
-    const benchBtn = this.element.querySelector("#batata-benchmark-btn");
-    if (benchBtn) {
-      benchBtn.disabled = this.#benchmarkRunning;
-
-      benchBtn.addEventListener("click", async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (this.#benchmarkRunning) return;
-
-        await this.#runBenchmark();
-      });
+    try {
+      game.settings.sheet?.close();
+    } catch {
+      // Se a folha de settings não existir, ignora.
     }
-
-    // Journal report
-    const journalBtn = this.element.querySelector("#batata-journal-btn");
-    if (journalBtn) {
-      journalBtn.disabled =
-        !this.#benchmarkDone ||
-        this.#benchmarkRunning ||
-        this.#journalCreating ||
-        !this.#benchmarkResult;
-
-      journalBtn.addEventListener("click", async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (this.#journalCreating) return;
-
-        await this.#createJournalReport();
-      });
-    }
-
-    // Granular
-    this.element.querySelectorAll("[data-feature]").forEach((el) => {
-      el.addEventListener("change", (e) => {
-        e.preventDefault();
-
-        const id = el.dataset.feature;
-        if (!id) return;
-
-        if (el.type === "checkbox") {
-          toggleGranularFeature(id);
-        } else if (el.tagName === "SELECT") {
-          setGranularFeature(id, Number(el.value));
-        }
-
-        refitSoon(this);
-      });
-    });
-
-    // Reset granular, se o template expuser botão para isso.
-    const resetGranularBtn = this.element.querySelector(
-      "[data-action='reset-granular']",
-    );
-    if (resetGranularBtn) {
-      resetGranularBtn.addEventListener("click", async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        await resetGranular(this.#selectedLevel);
-        this.render();
-      });
-    }
-
-    // Monitor: atualiza DOM direto via hook (1x/s), sem rerender.
-    // Remove handler anterior para evitar duplicação após rerenders.
-    if (this.#tickHandler) {
-      Hooks.off("BatataOuNaoMonitorTick", this.#tickHandler);
-      this.#tickHandler = null;
-    }
-
-    this.#tickHandler = (monitorState) => this.#updateMonitorDom(monitorState);
-    Hooks.on("BatataOuNaoMonitorTick", this.#tickHandler);
-
-    // Gate: benchmark obrigatório antes de aplicar + confirmação de override.
-    const submitBtn = this.element.querySelector('button[type="submit"]');
-    if (submitBtn) {
-      submitBtn.disabled = !this.#benchmarkDone || this.#benchmarkRunning;
-
-      submitBtn.addEventListener("click", async (e) => {
-        if (this.#overrideConfirmed || !this.#needsOverrideConfirm()) return;
-
-        e.preventDefault();
-        e.stopPropagation();
-
-        const ok = await this.#confirmOverride();
-        if (!ok) return;
-
-        this.#overrideConfirmed = true;
-        submitBtn.click();
-      });
-    }
-
-    game.settings.sheet?.close();
   }
 
   async _onClose(options) {
@@ -478,6 +394,156 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
     await super._onClose(options);
   }
 
+  #bindQualityCards() {
+    this.element.querySelectorAll(".batata-card").forEach((el) => {
+      el.addEventListener("click", (event) => {
+        event.preventDefault();
+        this.#selectQualityCard(el);
+      });
+
+      el.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+
+        event.preventDefault();
+        this.#selectQualityCard(el);
+      });
+    });
+  }
+
+  #selectQualityCard(el) {
+    this.element.querySelectorAll(".batata-card").forEach((card) => {
+      card.removeAttribute("active");
+      card.classList.remove("active");
+      card.setAttribute("aria-checked", "false");
+    });
+
+    el.setAttribute("active", "true");
+    el.classList.add("active");
+    el.setAttribute("aria-checked", "true");
+
+    this.#selectedLevel = Number(el.dataset.level);
+    this.#overrideConfirmed = false;
+  }
+
+  #bindBenchmarkButton() {
+    const benchBtn = this.element.querySelector("#batata-benchmark-btn");
+    if (!benchBtn) return;
+
+    benchBtn.disabled = this.#benchmarkRunning;
+
+    benchBtn.addEventListener("click", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (this.#benchmarkRunning) return;
+      await this.#runBenchmark();
+    });
+  }
+
+  #bindJournalButtons() {
+    const journalBtn = this.element.querySelector("#batata-journal-btn");
+    if (journalBtn) {
+      journalBtn.disabled =
+        !this.#benchmarkDone || !this.#benchmarkResult || this.#journalRunning;
+
+      journalBtn.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        await this.#generateJournal();
+      });
+    }
+
+    const exportMdBtn = this.element.querySelector("#batata-export-md-btn");
+    if (exportMdBtn) {
+      exportMdBtn.disabled =
+        !this.#benchmarkDone || !this.#benchmarkResult || this.#exportRunning;
+
+      exportMdBtn.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        await this.#exportMarkdown();
+      });
+    }
+
+    const exportJsonBtn = this.element.querySelector("#batata-export-json-btn");
+    if (exportJsonBtn) {
+      exportJsonBtn.disabled =
+        !this.#benchmarkDone || !this.#benchmarkResult || this.#exportRunning;
+
+      exportJsonBtn.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        await this.#exportJson();
+      });
+    }
+  }
+
+  #bindGranularControls() {
+    this.element.querySelectorAll("[data-feature]").forEach((el) => {
+      el.addEventListener("change", (event) => {
+        event.preventDefault();
+
+        const id = el.dataset.feature;
+        if (!id) return;
+
+        if (el.type === "checkbox") {
+          toggleGranularFeature(id);
+        } else if (el.tagName === "SELECT") {
+          setGranularFeature(id, Number(el.value));
+        }
+
+        refitSoon(this);
+      });
+    });
+
+    const resetGranularBtn = this.element.querySelector(
+      "[data-action='reset-granular']",
+    );
+
+    if (resetGranularBtn) {
+      resetGranularBtn.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        await resetGranular(this.#selectedLevel);
+        this.render();
+      });
+    }
+  }
+
+  #bindSubmitGate() {
+    const submitBtn = this.element.querySelector('button[type="submit"]');
+    if (!submitBtn) return;
+
+    submitBtn.disabled = !this.#benchmarkDone || this.#benchmarkRunning;
+
+    submitBtn.addEventListener("click", async (event) => {
+      if (this.#overrideConfirmed || !this.#needsOverrideConfirm()) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const ok = await this.#confirmOverride();
+      if (!ok) return;
+
+      this.#overrideConfirmed = true;
+      submitBtn.click();
+    });
+  }
+
+  #bindMonitorTick() {
+    if (this.#tickHandler) {
+      Hooks.off("BatataOuNaoMonitorTick", this.#tickHandler);
+      this.#tickHandler = null;
+    }
+
+    this.#tickHandler = (monitorState) => this.#updateMonitorDom(monitorState);
+    Hooks.on("BatataOuNaoMonitorTick", this.#tickHandler);
+  }
+
   /**
    * Atualiza os números do monitor direto no DOM barato, sem rerender.
    *
@@ -488,20 +554,9 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
 
     const currentEl = this.element.querySelector("[data-monitor-current]");
     const avgEl = this.element.querySelector("[data-monitor-avg]");
-    const graphEl = this.element.querySelector("[data-monitor-graph]");
 
     if (currentEl) currentEl.textContent = String(monitorState.currentFps);
     if (avgEl) avgEl.textContent = String(monitorState.avgFps);
-    if (graphEl) {
-      graphEl.innerHTML =
-        buildSparklineSvg(getFpsHistory(), {
-          label: "Live FPS",
-          color: GRAPH_COLORS.spirit,
-          min: 0,
-          preferredMax: 60,
-          higherIsBetter: true,
-        }) ?? "";
-    }
   }
 
   async #runBenchmark() {
@@ -533,18 +588,17 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
       this.#benchmarkResult = await runBenchmark(6000);
       this.#benchmarkDone = true;
 
+      if (typeof this.#benchmarkResult?.tier === "number") {
+        this.#selectedLevel = this.#benchmarkResult.tier;
+      }
+
       try {
         await setSetting(SETTING_KEYS.BENCHMARK_RESULT, this.#benchmarkResult);
       } catch (err) {
         console.warn("BatataOuNao | Erro ao salvar benchmarkResult:", err);
       }
 
-      if (
-        this.#benchmarkResult.reliable &&
-        this.#benchmarkResult.tier !== null
-      ) {
-        this.#selectedLevel = this.#benchmarkResult.tier;
-
+      if (this.#benchmarkResult?.reliable) {
         notify(
           "info",
           "BATATAOU_NAO.Notify.BenchmarkComplete",
@@ -567,6 +621,8 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
         "BATATAOU_NAO.Notify.BenchmarkFailed",
         "Batata Ou Não | Benchmark falhou. Veja o console para detalhes.",
       );
+
+      this.#benchmarkDone = false;
     } finally {
       this.#benchmarkRunning = false;
       this.render();
@@ -574,106 +630,215 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
     }
   }
 
-  async #createJournalReport() {
-    if (this.#journalCreating) return;
+  async #generateJournal() {
+    if (this.#journalRunning) return;
 
     if (!this.#benchmarkResult) {
       notify(
         "warn",
-        "BATATAOU_NAO.Notify.JournalNoBenchmark",
-        "Batata Ou Não | Rode um benchmark antes de gerar o Journal.",
+        "BATATAOU_NAO.Notify.NoBenchmarkForJournal",
+        "Batata Ou Não | Rode o benchmark antes de gerar o Journal.",
       );
       return;
     }
 
-    this.#journalCreating = true;
+    this.#journalRunning = true;
     this.render();
-    refitSoon(this);
 
     try {
-      const entry = await createBenchmarkJournalReport(this.#benchmarkResult);
+      await createBenchmarkJournalReport(
+        this.#benchmarkResult,
+        this.#lastApplySummary,
+      );
 
       notify(
         "info",
         "BATATAOU_NAO.Notify.JournalCreated",
         "Batata Ou Não | Journal de benchmark criado.",
       );
-
-      Hooks.call("BatataOuNaoJournalCreated", entry, this.#benchmarkResult);
     } catch (err) {
       console.error("BatataOuNao | Falha ao gerar Journal:", err);
 
       notify(
         "error",
         "BATATAOU_NAO.Notify.JournalFailed",
-        "Batata Ou Não | Falha ao gerar Journal. Veja o console para detalhes.",
+        "Batata Ou Não | Falha ao gerar Journal. Veja o console.",
       );
     } finally {
-      this.#journalCreating = false;
+      this.#journalRunning = false;
       this.render();
       refitSoon(this);
     }
   }
 
-  /**
-   * Verifica se a escolha atual exige confirmação de override.
-   * Exige quando não há benchmark confiável, quando o FPS não pôde ser medido
-   * ou quando o nível escolhido difere do tier recomendado.
-   *
-   * @returns {boolean}
-   */
+  async #exportMarkdown() {
+    if (this.#exportRunning) return;
+
+    if (!this.#benchmarkResult) {
+      notify(
+        "warn",
+        "BATATAOU_NAO.Notify.NoBenchmarkForExport",
+        "Batata Ou Não | Rode o benchmark antes de exportar.",
+      );
+      return;
+    }
+
+    this.#exportRunning = true;
+
+    try {
+      exportBenchmarkMarkdown(this.#benchmarkResult, this.#lastApplySummary);
+
+      notify(
+        "info",
+        "BATATAOU_NAO.Notify.ExportMarkdownComplete",
+        "Batata Ou Não | Markdown exportado.",
+      );
+    } catch (err) {
+      console.error("BatataOuNao | Falha ao exportar Markdown:", err);
+
+      notify(
+        "error",
+        "BATATAOU_NAO.Notify.ExportFailed",
+        "Batata Ou Não | Falha ao exportar relatório.",
+      );
+    } finally {
+      this.#exportRunning = false;
+      refitSoon(this);
+    }
+  }
+
+  async #exportJson() {
+    if (this.#exportRunning) return;
+
+    if (!this.#benchmarkResult) {
+      notify(
+        "warn",
+        "BATATAOU_NAO.Notify.NoBenchmarkForExport",
+        "Batata Ou Não | Rode o benchmark antes de exportar.",
+      );
+      return;
+    }
+
+    this.#exportRunning = true;
+
+    try {
+      exportBenchmarkJson(this.#benchmarkResult, this.#lastApplySummary);
+
+      notify(
+        "info",
+        "BATATAOU_NAO.Notify.ExportJsonComplete",
+        "Batata Ou Não | JSON exportado.",
+      );
+    } catch (err) {
+      console.error("BatataOuNao | Falha ao exportar JSON:", err);
+
+      notify(
+        "error",
+        "BATATAOU_NAO.Notify.ExportFailed",
+        "Batata Ou Não | Falha ao exportar relatório.",
+      );
+    } finally {
+      this.#exportRunning = false;
+      refitSoon(this);
+    }
+  }
+
   #needsOverrideConfirm() {
     if (!this.#benchmarkDone || !this.#benchmarkResult) return false;
 
-    if (!this.#benchmarkResult.reliable) return true;
-    if (this.#benchmarkResult.tier === null) return true;
+    const tier = this.#benchmarkResult.tier;
 
-    return this.#selectedLevel !== this.#benchmarkResult.tier;
-  }
-
-  /**
-   * Diálogo de confirmação para override do tier recomendado,
-   * avisando os problemas possíveis de cada direção.
-   *
-   * @returns {Promise<boolean>}
-   */
-  async #confirmOverride() {
-    const result = this.#benchmarkResult;
-
-    let warnKey = "BATATAOU_NAO.Dialog.OverrideNoFps";
-
-    if (result?.tier !== null && result?.tier !== undefined) {
-      warnKey =
-        this.#selectedLevel > result.tier
-          ? "BATATAOU_NAO.Dialog.OverrideAbove"
-          : "BATATAOU_NAO.Dialog.OverrideBelow";
+    if (tier === null || tier === undefined) {
+      return true;
     }
 
-    const recommended =
-      result?.tier !== null && result?.tier !== undefined
-        ? qualityLabel(result.tier)
-        : null;
+    return Number(this.#selectedLevel) !== Number(tier);
+  }
 
-    const content = `<p>${game.i18n.localize(warnKey)}</p>${
-      recommended
-        ? `<p><strong>${game.i18n.localize("BATATAOU_NAO.Dialog.Recommended")}: ${recommended}</strong></p>`
-        : ""
-    }`;
+  async #confirmOverride() {
+    const tier = this.#benchmarkResult?.tier;
 
-    return foundry.applications.api.DialogV2.confirm({
-      window: {
-        title: game.i18n.localize("BATATAOU_NAO.Dialog.OverrideTitle"),
+    let messageKey = "BATATAOU_NAO.Dialog.OverrideNoFps";
+    let fallback =
+      "Não foi possível medir seu FPS. Escolha manualmente se o jogo ficar pesado, volte aqui e rode o benchmark novamente.";
+
+    if (typeof tier === "number") {
+      if (this.#selectedLevel > tier) {
+        messageKey = "BATATAOU_NAO.Dialog.OverrideAbove";
+        fallback =
+          "Você está escolhendo um nível ACIMA do recomendado para sua máquina. Isso pode causar FPS baixo, travamentos em cenas cheias e stuttering durante o combate.";
+      } else if (this.#selectedLevel < tier) {
+        messageKey = "BATATAOU_NAO.Dialog.OverrideBelow";
+        fallback =
+          "Você está escolhendo um nível ABAIXO do recomendado. Sua máquina aguenta mais: você perderá sombras, anti-aliasing e animações à toa.";
+      }
+    }
+
+    const content = `
+      <div class="batata-override-confirm">
+        <p>${t(messageKey, fallback)}</p>
+      </div>
+    `;
+
+    if (globalThis.foundry?.applications?.api?.DialogV2?.confirm) {
+      return foundry.applications.api.DialogV2.confirm({
+        window: {
+          title: t(
+            "BATATAOU_NAO.Dialog.OverrideTitle",
+            "Confirmar escolha manual",
+          ),
+        },
+        content,
+        yes: {
+          label: t("BATATAOU_NAO.Dialog.OverrideConfirm", "Confirmar"),
+          icon: "fas fa-check",
+        },
+        no: {
+          label: t("BATATAOU_NAO.Dialog.OverrideCancel", "Cancelar"),
+          icon: "fas fa-xmark",
+        },
+      });
+    }
+
+    return globalThis.confirm?.(t(messageKey, fallback)) ?? false;
+  }
+
+  #buildProtocolsContext() {
+    return [
+      {
+        level: 0,
+        name: t("BATATAOU_NAO.Quality.Low", "Batata"),
+        description: t(
+          "BATATAOU_NAO.Quality.LowDescription",
+          "Máxima performance. Reduz efeitos visuais pesados para máquinas mais fracas.",
+        ),
+        image: "modules/batata-ou-nao/assets/batata_fraco.webp",
+        imageAlt: t("BATATAOU_NAO.Quality.Low", "Batata"),
+        active: Number(this.#selectedLevel) === 0,
       },
-      content,
-      yes: {
-        label: game.i18n.localize("BATATAOU_NAO.Dialog.OverrideConfirm"),
-        icon: "fas fa-check",
+      {
+        level: 1,
+        name: t("BATATAOU_NAO.Quality.Medium", "Batata Boa"),
+        description: t(
+          "BATATAOU_NAO.Quality.MediumDescription",
+          "Equilíbrio entre visual e desempenho.",
+        ),
+        image: "modules/batata-ou-nao/assets/batata_boa.webp",
+        imageAlt: t("BATATAOU_NAO.Quality.Medium", "Batata Boa"),
+        active: Number(this.#selectedLevel) === 1,
       },
-      no: {
-        label: game.i18n.localize("BATATAOU_NAO.Dialog.OverrideCancel"),
-        icon: "fas fa-xmark",
+      {
+        level: 2,
+        name: t("BATATAOU_NAO.Quality.High", "Premium"),
+        description: t(
+          "BATATAOU_NAO.Quality.HighDescription",
+          "Visual máximo para máquinas fortes.",
+        ),
+        image: "modules/batata-ou-nao/assets/batata_premium.webp",
+        imageAlt: t("BATATAOU_NAO.Quality.High", "Premium"),
+        active: Number(this.#selectedLevel) === 2,
       },
-    });
+    ];
   }
 
   #buildGranularContext() {
@@ -702,6 +867,7 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
     const active = form.querySelector(
       ".batata-card[active], .batata-card.active",
     );
+
     if (!active) return;
 
     const level = Number(active.dataset.level);
