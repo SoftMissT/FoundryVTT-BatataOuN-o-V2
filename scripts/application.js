@@ -1,6 +1,12 @@
 /**
- * ApplicationV2 Diálogo integrado.
- * Monitor atualiza o DOM via BatataOuNaoMonitorTick sem rerender pesado.
+ * ApplicationV2 — Diálogo Batata Ou Não.
+ *
+ * Correções v1.0.12:
+ * - Protocolos dinâmicos mantidos.
+ * - Monitor FPS iniciado quando a HUD abre, sem auto-ajuste automático.
+ * - Gráfico FPS principal atualizado ao vivo via BatataOuNaoMonitorTick.
+ * - Caminhos de assets centralizados.
+ * - Export Journal/Markdown/JSON continua delegado para journal.js.
  *
  * @module application
  */
@@ -14,12 +20,28 @@ import {
   setGranularFeature,
   resetGranular,
 } from "./granular.js";
-import { getMonitorState, getFpsHistory } from "./monitor.js";
+import {
+  startMonitor,
+  getMonitorState,
+  getFpsHistory,
+} from "./monitor.js";
 import {
   createBenchmarkJournalReport,
   exportBenchmarkMarkdown,
   exportBenchmarkJson,
 } from "./journal.js";
+
+const MODULE_ID = "batata-ou-nao";
+
+/**
+ * Caminho seguro para assets do módulo.
+ *
+ * @param {string} path
+ * @returns {string}
+ */
+function assetPath(path) {
+  return `modules/${MODULE_ID}/${String(path).replace(/^\/+/, "")}`;
+}
 
 /**
  * Localiza texto com fallback seguro.
@@ -81,7 +103,7 @@ function qualityLabel(level) {
 }
 
 /**
- * Escapa texto para uso em SVG inline.
+ * Escapa texto para SVG inline.
  *
  * @param {string|number|null|undefined} value
  * @returns {string}
@@ -184,7 +206,7 @@ function createSparklineSvg(values, { label, color, invert = false }) {
 }
 
 /**
- * Extrai arrays de amostras com compatibilidade entre formatos.
+ * Extrai amostras de benchmark com compatibilidade entre formatos.
  *
  * @param {Object|null} benchmark
  * @returns {{ fps: number[], frameMs: number[], quality: number[] }}
@@ -194,7 +216,11 @@ function extractBenchmarkSamples(benchmark) {
 
   const samples = benchmark.samples ?? benchmark.chart ?? {};
 
-  const fps = samples.fps ?? samples.fpsSamples ?? benchmark.fpsSamples ?? [];
+  const fps =
+    samples.fps ??
+    samples.fpsSamples ??
+    benchmark.fpsSamples ??
+    [];
 
   const frameMs =
     samples.frameMs ??
@@ -219,13 +245,21 @@ function extractBenchmarkSamples(benchmark) {
 }
 
 /**
- * Cria contexto gráfico para a HUD.
+ * Cria gráficos de benchmark.
+ * O FPS usa histórico vivo quando existir; senão cai para amostras do benchmark.
  *
  * @param {Object|null} benchmark
  * @returns {Object}
  */
 function buildBenchmarkGraphs(benchmark) {
   const samples = extractBenchmarkSamples(benchmark);
+
+  let liveFps = [];
+  try {
+    liveFps = getFpsHistory();
+  } catch {
+    liveFps = [];
+  }
 
   const fallbackFps = benchmark?.fpsAvailable
     ? [benchmark.fps, benchmark.fps]
@@ -240,11 +274,14 @@ function buildBenchmarkGraphs(benchmark) {
       ? [benchmark.stutterPct, benchmark.stutterPct]
       : [];
 
-  const fpsValues = samples.fps.length ? samples.fps : fallbackFps;
+  const fpsValues = liveFps.length >= 2
+    ? liveFps
+    : samples.fps.length
+      ? samples.fps
+      : fallbackFps;
+
   const frameValues = samples.frameMs.length ? samples.frameMs : fallbackFrame;
-  const qualityValues = samples.quality.length
-    ? samples.quality
-    : fallbackQuality;
+  const qualityValues = samples.quality.length ? samples.quality : fallbackQuality;
 
   return {
     available:
@@ -253,7 +290,7 @@ function buildBenchmarkGraphs(benchmark) {
       qualityValues.length >= 2,
 
     fpsSvg: createSparklineSvg(fpsValues, {
-      label: "FPS",
+      label: "FPS LIVE",
       color: "#C1000C",
     }),
 
@@ -272,11 +309,12 @@ function buildBenchmarkGraphs(benchmark) {
 }
 
 /**
- * Cria gráfico vivo do monitor.
+ * Gráfico vivo do monitor.
  *
+ * @param {string} [label="FPS LIVE"]
  * @returns {string}
  */
-function buildMonitorGraphSvg() {
+function buildMonitorGraphSvg(label = "FPS LIVE") {
   let history = [];
 
   try {
@@ -286,7 +324,7 @@ function buildMonitorGraphSvg() {
   }
 
   return createSparklineSvg(history, {
-    label: "FPS",
+    label,
     color: "#A4FE23",
   });
 }
@@ -328,6 +366,8 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
   #journalRunning = false;
 
   async _prepareContext() {
+    this.#ensureLiveMonitor();
+
     const gpu = detectGPU();
     const monitor = getMonitorState();
     const granular = this.#buildGranularContext();
@@ -365,6 +405,8 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
   async _onRender(context, options) {
     await super._onRender(context, options);
 
+    this.#ensureLiveMonitor();
+
     refitSoon(this);
 
     this.#bindQualityCards();
@@ -373,11 +415,12 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
     this.#bindGranularControls();
     this.#bindSubmitGate();
     this.#bindMonitorTick();
+    this.#bindProtocolImageFallbacks();
 
     try {
       game.settings.sheet?.close();
     } catch {
-      // Se a folha de settings não existir, ignora.
+      // Settings sheet pode não existir.
     }
   }
 
@@ -392,6 +435,26 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
     }
 
     await super._onClose(options);
+  }
+
+  /**
+   * Liga monitor ao abrir a HUD.
+   * Importante: autoAdjust=false para não alterar qualidade sozinho.
+   */
+  #ensureLiveMonitor() {
+    try {
+      if (!globalThis.canvas?.ready) return;
+
+      const monitor = getMonitorState();
+      if (monitor.active) return;
+
+      startMonitor({
+        autoAdjust: false,
+        sampleSize: 120,
+      });
+    } catch (err) {
+      console.warn("BatataOuNao | Não foi possível iniciar monitor vivo:", err);
+    }
   }
 
   #bindQualityCards() {
@@ -544,8 +607,24 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
     Hooks.on("BatataOuNaoMonitorTick", this.#tickHandler);
   }
 
+  #bindProtocolImageFallbacks() {
+    this.element.querySelectorAll(".batata-card-img img").forEach((img) => {
+      img.loading = "eager";
+      img.decoding = "async";
+
+      img.addEventListener("error", () => {
+        const box = img.closest(".batata-card-img");
+        if (!box) return;
+
+        box.classList.add("is-missing-image");
+        box.dataset.missingImage = "true";
+        img.remove();
+      }, { once: true });
+    });
+  }
+
   /**
-   * Atualiza os números do monitor direto no DOM barato, sem rerender.
+   * Atualiza números e gráficos vivos sem rerender pesado.
    *
    * @param {{ currentFps: number, avgFps: number }} monitorState
    */
@@ -557,6 +636,21 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
 
     if (currentEl) currentEl.textContent = String(monitorState.currentFps);
     if (avgEl) avgEl.textContent = String(monitorState.avgFps);
+
+    const liveSvg = buildMonitorGraphSvg("FPS LIVE");
+
+    const monitorGraph = this.element.querySelector(".batata-monitor-graph");
+    if (monitorGraph) {
+      monitorGraph.innerHTML = liveSvg;
+    }
+
+    const mainFpsGraph = this.element.querySelector(
+      ".batata-graphs-section .graph-body .batata-graph-frame",
+    );
+
+    if (mainFpsGraph) {
+      mainFpsGraph.innerHTML = liveSvg;
+    }
   }
 
   async #runBenchmark() {
@@ -570,6 +664,8 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
       );
       return;
     }
+
+    this.#ensureLiveMonitor();
 
     this.#benchmarkRunning = true;
     this.#benchmarkDone = false;
@@ -760,7 +856,7 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
 
     let messageKey = "BATATAOU_NAO.Dialog.OverrideNoFps";
     let fallback =
-      "Não foi possível medir seu FPS. Escolha manualmente se o jogo ficar pesado, volte aqui e rode o benchmark novamente.";
+      "Não foi possível medir seu FPS. Escolha manualmente — se o jogo ficar pesado, volte aqui e rode o benchmark novamente.";
 
     if (typeof tier === "number") {
       if (this.#selectedLevel > tier) {
@@ -812,7 +908,7 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
           "BATATAOU_NAO.Quality.LowDescription",
           "Máxima performance. Reduz efeitos visuais pesados para máquinas mais fracas.",
         ),
-        image: "modules/batata-ou-nao/assets/batata_fraco.webp",
+        image: assetPath("assets/batata_fraco.webp"),
         imageAlt: t("BATATAOU_NAO.Quality.Low", "Batata"),
         active: Number(this.#selectedLevel) === 0,
       },
@@ -823,7 +919,7 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
           "BATATAOU_NAO.Quality.MediumDescription",
           "Equilíbrio entre visual e desempenho.",
         ),
-        image: "modules/batata-ou-nao/assets/batata_boa.webp",
+        image: assetPath("assets/batata_boa.webp"),
         imageAlt: t("BATATAOU_NAO.Quality.Medium", "Batata Boa"),
         active: Number(this.#selectedLevel) === 1,
       },
@@ -834,7 +930,7 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
           "BATATAOU_NAO.Quality.HighDescription",
           "Visual máximo para máquinas fortes.",
         ),
-        image: "modules/batata-ou-nao/assets/batata_premium.webp",
+        image: assetPath("assets/batata_premium.webp"),
         imageAlt: t("BATATAOU_NAO.Quality.High", "Premium"),
         active: Number(this.#selectedLevel) === 2,
       },

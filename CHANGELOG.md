@@ -14,6 +14,20 @@ This project follows the spirit of [Keep a Changelog](https://keepachangelog.com
 
 ---
 
+## [1.0.12] - 2026-08-29
+
+### Fixed
+- Fixed benchmark Journal pages rendering raw Markdown in Foundry by generating HTML Journal content.
+- Fixed Markdown and JSON exports to prefer Foundry's file save helper instead of opening blob URLs.
+- Fixed misleading live graph labels by marking FPS as live and frame/stutter graphs as benchmark snapshots.
+- Added runtime fallback for missing protocol images.
+- Improved protocol card visibility and compact HUD spacing.
+
+### Changed
+- The HUD now starts the FPS monitor when opened without applying automatic quality changes.
+- The main FPS graph now updates from live monitor history while the HUD is open.
+
+
 ## [1.0.11] - 2026-08-29
 
 ### Fixed
