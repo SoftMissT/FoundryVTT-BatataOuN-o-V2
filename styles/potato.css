@@ -1175,3 +1175,235 @@
     }
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   BATATA HUD v2.0.12 — Runtime Hotfix
+   - protocol images/fallback
+   - FPS live labels
+   - compact protocol cards
+   - clearer graph semantics
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Graph status labels ───────────────────────────────────── */
+
+#batata-ou-nao-dialog .batata-graph-disclaimer {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(14, 245, 255, 0.18);
+  background: rgba(14, 245, 255, 0.055);
+  color: var(--batata-c-muted, #d6c0cf);
+  font-family: var(--batata-font-body, "Rajdhani", system-ui, sans-serif);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+#batata-ou-nao-dialog .batata-live-pill,
+#batata-ou-nao-dialog .batata-snapshot-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  vertical-align: middle;
+}
+
+#batata-ou-nao-dialog .batata-live-pill {
+  color: #080008;
+  background: var(--batata-c-lime, #A4FE23);
+  box-shadow: 0 0 14px rgba(164, 254, 35, 0.25);
+}
+
+#batata-ou-nao-dialog .batata-snapshot-pill {
+  color: var(--batata-c-mind, #FF93FF);
+  background: rgba(255, 147, 255, 0.12);
+  border: 1px solid rgba(255, 147, 255, 0.26);
+}
+
+#batata-ou-nao-dialog .graph-live .batata-graph-frame {
+  border-color: rgba(164, 254, 35, 0.28);
+  box-shadow: inset 0 0 18px rgba(164, 254, 35, 0.06);
+}
+
+#batata-ou-nao-dialog .graph-snapshot .batata-graph-frame {
+  opacity: 0.92;
+}
+
+/* ── Protocol cards: move into visible flow and compact layout ─ */
+
+#batata-ou-nao-dialog .batata-protocols-section {
+  margin-top: 2px;
+}
+
+#batata-ou-nao-dialog .batata-cards {
+  align-items: stretch;
+}
+
+#batata-ou-nao-dialog .batata-card {
+  min-height: 0;
+}
+
+#batata-ou-nao-dialog .batata-card-img {
+  position: relative;
+  height: 112px;
+  min-height: 112px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+#batata-ou-nao-dialog .batata-card-img img {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+#batata-ou-nao-dialog .batata-card-img-fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+  color: var(--batata-c-gold, #F8EB4D);
+  background:
+    radial-gradient(circle at center, rgba(248, 235, 77, 0.12), transparent 52%),
+    linear-gradient(180deg, rgba(71, 4, 42, 0.92), rgba(8, 0, 8, 0.98));
+  text-align: center;
+  opacity: 1;
+}
+
+#batata-ou-nao-dialog .batata-card-img-fallback i {
+  font-size: 1.75rem;
+  filter: drop-shadow(0 0 12px rgba(248, 235, 77, 0.35));
+}
+
+#batata-ou-nao-dialog .batata-card-img-fallback span {
+  font-family: var(--batata-font-display, "Orbitron", system-ui, sans-serif);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+#batata-ou-nao-dialog .batata-card-img.is-missing-image {
+  border-color: rgba(248, 235, 77, 0.32);
+}
+
+#batata-ou-nao-dialog .batata-card-img.is-missing-image .batata-card-img-fallback {
+  z-index: 3;
+}
+
+#batata-ou-nao-dialog .batata-card-text h2 {
+  font-size: 0.95rem;
+}
+
+#batata-ou-nao-dialog .batata-card-text p {
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+/* ── Make first screen less cramped after benchmark ─────────── */
+
+#batata-ou-nao-dialog .batata-hud-results {
+  gap: 10px;
+}
+
+#batata-ou-nao-dialog .batata-vitals-grid {
+  gap: 10px;
+}
+
+#batata-ou-nao-dialog .batata-vital-panel {
+  padding: 10px 12px;
+}
+
+#batata-ou-nao-dialog .batata-vital-heading {
+  margin-bottom: 8px;
+}
+
+#batata-ou-nao-dialog .batata-vital-main {
+  margin-bottom: 6px;
+}
+
+#batata-ou-nao-dialog .batata-vital-row {
+  padding: 4px 0;
+}
+
+#batata-ou-nao-dialog .batata-graphs-section {
+  padding: 10px 12px;
+}
+
+#batata-ou-nao-dialog .batata-graph-card {
+  min-height: 118px;
+  padding: 10px;
+}
+
+#batata-ou-nao-dialog .batata-graph-frame {
+  min-height: 86px;
+}
+
+#batata-ou-nao-dialog .batata-sparkline-svg {
+  height: 86px;
+  min-height: 86px;
+}
+
+/* ── Action buttons tighter and readable ────────────────────── */
+
+#batata-ou-nao-dialog .batata-action-btn {
+  min-height: 44px;
+  padding: 9px 10px;
+  font-size: 0.68rem;
+}
+
+#batata-ou-nao-dialog .batata-action-btn i {
+  font-size: 0.8rem;
+}
+
+/* ── Better protocol visibility when opened in smaller windows ─ */
+
+@media (max-height: 900px) {
+  #batata-ou-nao-dialog .batata-card-img {
+    height: 92px;
+    min-height: 92px;
+  }
+
+  #batata-ou-nao-dialog .batata-card-text p {
+    display: none;
+  }
+
+  #batata-ou-nao-dialog .batata-overview-card {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  #batata-ou-nao-dialog .batata-overview-value {
+    font-size: 1.85rem;
+  }
+
+  #batata-ou-nao-dialog .batata-vital-big {
+    font-size: 1.7rem;
+  }
+}
+
+@media (max-width: 760px) {
+  #batata-ou-nao-dialog .batata-card-img {
+    height: 120px;
+    min-height: 120px;
+  }
+
+  #batata-ou-nao-dialog .batata-card-text p {
+    display: block;
+  }
+}

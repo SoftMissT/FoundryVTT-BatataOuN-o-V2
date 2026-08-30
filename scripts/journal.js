@@ -1,433 +1,24 @@
 /**
- * Journal report generator Batata Ou Não.
+ * Benchmark Journal + exports.
  *
- * Responsabilidades:
- * - Criar um JournalEntry persistente a partir do resultado do benchmark.
- * - Gerar relatório Markdown limpo, sem tabelas vazias.
- * - Exportar relatório Markdown.
- * - Exportar payload técnico JSON.
- *
- * Não roda automaticamente: deve ser chamado por ação explícita do usuário.
+ * Correções v1.0.12:
+ * - Journal usa HTML real em vez de Markdown cru.
+ * - Export Markdown/JSON usa saveDataToFile quando disponível.
+ * - Payload do Journal é compacto para não poluir a página.
  *
  * @module journal
  */
 
-import { MODULE_ID } from "./main.js";
-
-const REPORT_SCHEMA_VERSION = 2;
-
-/**
- * Cria um relatório de benchmark no Journal do mundo.
- *
- * @param {Object} benchmark
- * @param {Object|null} [applySummary=null]
- * @returns {Promise<JournalEntry>}
- */
-export async function createBenchmarkJournalReport(
-  benchmark,
-  applySummary = null,
-) {
-  assertBenchmark(benchmark);
-
-  if (!globalThis.JournalEntry?.create) {
-    throw new Error("BatataOuNao | JournalEntry API indisponível.");
-  }
-
-  const createdAt = new Date();
-  const safeBenchmark = toPlainData(benchmark);
-  const safeApplySummary = applySummary ? toPlainData(applySummary) : null;
-
-  const entry = await JournalEntry.create({
-    name: `${t(
-      "BATATAOU_NAO.Journal.EntryName",
-      "Batata Ou Não Benchmark",
-    )} ${formatDate(createdAt)}`,
-    flags: {
-      [MODULE_ID]: {
-        type: "benchmark-report",
-        schemaVersion: REPORT_SCHEMA_VERSION,
-        createdAt: createdAt.toISOString(),
-        benchmark: safeBenchmark,
-        applySummary: safeApplySummary,
-      },
-    },
-  });
-
-  const pages = buildPages(safeBenchmark, safeApplySummary, createdAt);
-  await entry.createEmbeddedDocuments("JournalEntryPage", pages);
-
-  try {
-    entry.sheet?.render?.(true);
-  } catch {
-    // Abrir o Journal é conveniência; falha aqui não invalida o relatório.
-  }
-
-  try {
-    Hooks.call("BatataOuNaoJournalCreated", entry, safeBenchmark);
-  } catch {
-    // Hooks externos não devem quebrar o fluxo do módulo.
-  }
-
-  return entry;
-}
+const MODULE_ID = "batata-ou-nao";
+const REPORT_SCHEMA_VERSION = 3;
 
 /**
- * Exporta o benchmark atual como arquivo Markdown.
+ * Localiza texto com fallback seguro.
  *
- * @param {Object} benchmark
- * @param {Object|null} [applySummary=null]
- * @returns {string} Conteúdo Markdown gerado.
+ * @param {string} key
+ * @param {string} fallback
+ * @returns {string}
  */
-export function exportBenchmarkMarkdown(benchmark, applySummary = null) {
-  assertBenchmark(benchmark);
-
-  const createdAt = new Date();
-  const safeBenchmark = toPlainData(benchmark);
-  const safeApplySummary = applySummary ? toPlainData(applySummary) : null;
-  const markdown = buildFullMarkdownReport(
-    safeBenchmark,
-    safeApplySummary,
-    createdAt,
-  );
-
-  downloadTextFile(
-    markdown,
-    `batata-ou-nao-benchmark-${slugTimestamp(createdAt)}.md`,
-    "text/markdown;charset=utf-8",
-  );
-
-  return markdown;
-}
-
-/**
- * Exporta o payload técnico do benchmark como JSON.
- *
- * @param {Object} benchmark
- * @param {Object|null} [applySummary=null]
- * @returns {Object} Payload serializado.
- */
-export function exportBenchmarkJson(benchmark, applySummary = null) {
-  assertBenchmark(benchmark);
-
-  const createdAt = new Date();
-  const payload = buildJsonPayload(
-    toPlainData(benchmark),
-    applySummary ? toPlainData(applySummary) : null,
-    createdAt,
-  );
-
-  const json = JSON.stringify(payload, null, 2);
-
-  downloadTextFile(
-    json,
-    `batata-ou-nao-benchmark-${slugTimestamp(createdAt)}.json`,
-    "application/json;charset=utf-8",
-  );
-
-  return payload;
-}
-
-// ─── Pages ──────────────────────────────────────────────────────
-
-function buildPages(benchmark, applySummary, createdAt) {
-  return [
-    textPage(
-      t("BATATAOU_NAO.Journal.PageSummary", "Resumo Clínico"),
-      buildSummaryMarkdown(benchmark, applySummary, createdAt),
-    ),
-    textPage(
-      t("BATATAOU_NAO.Journal.PageVitals", "Sinais Vitais"),
-      buildVitalsMarkdown(benchmark),
-    ),
-    textPage(
-      t("BATATAOU_NAO.Journal.PageSceneRender", "Cena e Render"),
-      buildSceneRenderMarkdown(benchmark),
-    ),
-    textPage(
-      t("BATATAOU_NAO.Journal.PageTechnicalPayload", "Payload Técnico"),
-      buildPayloadMarkdown(benchmark, applySummary, createdAt),
-    ),
-  ];
-}
-
-function textPage(name, content) {
-  return {
-    name,
-    type: "text",
-    text: {
-      format: getMarkdownFormat(),
-      content,
-    },
-  };
-}
-
-function getMarkdownFormat() {
-  return globalThis.CONST?.JOURNAL_ENTRY_PAGE_FORMATS?.MARKDOWN ?? 1;
-}
-
-// ─── Markdown builders ──────────────────────────────────────────
-
-function buildFullMarkdownReport(benchmark, applySummary, createdAt) {
-  return [
-    buildSummaryMarkdown(benchmark, applySummary, createdAt),
-    "",
-    buildVitalsMarkdown(benchmark),
-    "",
-    buildSceneRenderMarkdown(benchmark),
-    "",
-    buildPayloadMarkdown(benchmark, applySummary, createdAt),
-  ].join("\n");
-}
-
-function buildSummaryMarkdown(benchmark, applySummary, createdAt) {
-  const recommended = recommendedLabel(benchmark);
-  const reliability = benchmark.reliable
-    ? t("BATATAOU_NAO.Journal.Reliable", "Confiável")
-    : t("BATATAOU_NAO.Journal.Unreliable", "Não confiável");
-
-  const lines = [
-    "# Batata Ou Não System Triage",
-    "",
-    `> ${t("BATATAOU_NAO.Journal.GeneratedAt", "Gerado em")}: ${safeInline(
-      formatDate(createdAt),
-    )}`,
-    "",
-    "## Resumo Clínico",
-    "",
-    `- **Score:** ${valueOrDash(benchmark.score)}${benchmark.scoreAvailable ? "/100" : ""}`,
-    `- **Protocolo recomendado:** ${safeInline(recommended)}`,
-    `- **Confiabilidade:** ${safeInline(reliability)}`,
-    `- **FPS:** ${valueOrDash(benchmark.fps)}`,
-    `- **Frame médio:** ${ms(benchmark.avgFrameMs)}`,
-    `- **Stutter:** ${pct(benchmark.stutterPct)}`,
-    `- **Peso da cena:** ${valueOrDash(benchmark.sceneWeight?.score)}`,
-    `- **Foundry:** ${safeInline(benchmark.foundryVersion)}`,
-    `- **Fonte da medição:** ${safeInline(
-      benchmark.fpsSource ?? benchmark.baseline?.fpsSource,
-    )}`,
-    "",
-  ];
-
-  const reasons = arrayOfText(
-    benchmark.recommendationReasons ?? benchmark.recommendation?.reasons,
-  );
-
-  if (reasons.length) {
-    lines.push("## Diagnóstico", "");
-    for (const reason of reasons) lines.push(`- ${safeInline(reason)}`);
-    lines.push("");
-  }
-
-  const warnings = arrayOfText(benchmark.reliabilityWarnings);
-  if (warnings.length) {
-    lines.push("## Avisos de Confiabilidade", "");
-    for (const warning of warnings) lines.push(`- ${safeInline(warning)}`);
-    lines.push("");
-  } else {
-    lines.push("## Avisos de Confiabilidade", "");
-    lines.push("- Nenhum aviso crítico detectado.");
-    lines.push("");
-  }
-
-  const notes = arrayOfText(benchmark.notes);
-  if (notes.length) {
-    lines.push("## Notas Técnicas", "");
-    for (const note of notes) lines.push(`- ${safeInline(note)}`);
-    lines.push("");
-  }
-
-  if (applySummary) {
-    lines.push("## Aplicação de Preset", "");
-    lines.push(`- **Nível aplicado:** ${valueOrDash(applySummary.level)}`);
-    lines.push(`- **Aplicados:** ${valueOrDash(applySummary.applied)}`);
-    lines.push(`- **Ignorados:** ${valueOrDash(applySummary.skipped)}`);
-    lines.push(`- **Falhas:** ${valueOrDash(applySummary.failed)}`);
-    lines.push("");
-  }
-
-  return lines.join("\n").trimEnd();
-}
-
-function buildVitalsMarkdown(benchmark) {
-  const baseline = benchmark.baseline ?? {};
-
-  return [
-    "# Sinais Vitais",
-    "",
-    "## Corpo",
-    "",
-    `- **FPS:** ${valueOrDash(benchmark.fps)}`,
-    `- **FPS médio:** ${valueOrDash(baseline.avgFps ?? benchmark.fps)}`,
-    `- **1% low:** ${fps(baseline.low1Fps ?? benchmark.low1Fps)}`,
-    `- **Frames longos:** ${valueOrDash(
-      baseline.longFrames ?? benchmark.longFrames,
-    )}`,
-    `- **Amostras:** ${valueOrDash(
-      baseline.sampleCount ?? benchmark.sampleCount,
-    )}`,
-    "",
-    "## Mente",
-    "",
-    `- **Frame médio:** ${ms(baseline.avgFrameMs ?? benchmark.avgFrameMs)}`,
-    `- **p95:** ${ms(baseline.p95FrameMs ?? benchmark.p95FrameMs)}`,
-    `- **p99:** ${ms(baseline.p99FrameMs ?? benchmark.p99FrameMs)}`,
-    `- **Stutter:** ${pct(baseline.stutterPct ?? benchmark.stutterPct)}`,
-    "",
-    "## Espírito",
-    "",
-    `- **GPU:** ${safeInline(benchmark.gpuInfo?.renderer ?? benchmark.gpu)}`,
-    `- **Vendor:** ${safeInline(
-      benchmark.gpuInfo?.vendor ?? benchmark.renderer,
-    )}`,
-    `- **WebGL:** ${safeInline(benchmark.gpuInfo?.version)}`,
-    `- **Renderer de software:** ${yesNo(benchmark.gpuInfo?.softwareRenderer)}`,
-    `- **Fonte da medição:** ${safeInline(
-      benchmark.fpsSource ?? baseline.fpsSource,
-    )}`,
-  ].join("\n");
-}
-
-function buildSceneRenderMarkdown(benchmark) {
-  const scene = benchmark.sceneWeight ?? benchmark.scene ?? {};
-  const gl = benchmark.glParams ?? {};
-
-  const lines = [
-    "# Cena e Render",
-    "",
-    "## Cena",
-    "",
-    `- **Disponível:** ${yesNo(scene.available)}`,
-    `- **Score de peso:** ${valueOrDash(scene.score)}`,
-    `- **Tokens:** ${valueOrDash(scene.tokens)}`,
-    `- **Luzes:** ${valueOrDash(scene.lights)}`,
-    `- **Paredes:** ${valueOrDash(scene.walls)}`,
-    `- **Tiles:** ${valueOrDash(scene.tiles)}`,
-    `- **Desenhos:** ${valueOrDash(scene.drawings)}`,
-    `- **Sons:** ${valueOrDash(scene.sounds)}`,
-    `- **Largura:** ${valueOrDash(scene.width)}`,
-    `- **Altura:** ${valueOrDash(scene.height)}`,
-    `- **Grid:** ${valueOrDash(scene.gridSize)}`,
-    "",
-    "## WebGL",
-    "",
-    `- **Max texture size:** ${valueOrDash(gl.maxTextureSize)}`,
-    `- **Max renderbuffer size:** ${valueOrDash(gl.maxRenderbufferSize)}`,
-    `- **Max viewport dims:** ${safeInline(
-      Array.isArray(gl.maxViewportDims)
-        ? gl.maxViewportDims.join(" × ")
-        : gl.maxViewportDims,
-    )}`,
-    `- **Max vertex uniform vectors:** ${valueOrDash(
-      gl.maxVertexUniformVectors,
-    )}`,
-    `- **Max fragment uniform vectors:** ${valueOrDash(
-      gl.maxFragmentUniformVectors,
-    )}`,
-    `- **Max varying vectors:** ${valueOrDash(gl.maxVaryingVectors)}`,
-  ];
-
-  const sceneWarnings = arrayOfText(scene.warnings);
-  if (sceneWarnings.length) {
-    lines.push("", "## Alertas da Cena", "");
-    for (const warning of sceneWarnings) lines.push(`- ${safeInline(warning)}`);
-  }
-
-  return lines.join("\n");
-}
-
-function buildPayloadMarkdown(benchmark, applySummary, createdAt) {
-  const payload = buildJsonPayload(benchmark, applySummary, createdAt);
-
-  return [
-    "# Payload Técnico",
-    "",
-    "```json",
-    JSON.stringify(payload, null, 2),
-    "```",
-  ].join("\n");
-}
-
-function buildJsonPayload(benchmark, applySummary, createdAt) {
-  return {
-    module: MODULE_ID,
-    type: "benchmark-report",
-    schemaVersion: REPORT_SCHEMA_VERSION,
-    createdAt: createdAt.toISOString(),
-    world: {
-      id: safePlain(globalThis.game?.world?.id),
-      title: safePlain(globalThis.game?.world?.title),
-      system: safePlain(globalThis.game?.system?.id),
-    },
-    user: {
-      id: safePlain(globalThis.game?.user?.id),
-      name: safePlain(globalThis.game?.user?.name),
-    },
-    benchmark,
-    applySummary,
-  };
-}
-
-// ─── Download ───────────────────────────────────────────────────
-
-function downloadTextFile(content, filename, mimeType) {
-  if (typeof Blob !== "function" || !globalThis.document?.createElement) {
-    throw new Error("BatataOuNao | Download API indisponível neste ambiente.");
-  }
-
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.rel = "noopener";
-  anchor.style.display = "none";
-
-  document.body.appendChild(anchor);
-  anchor.click();
-
-  setTimeout(() => {
-    try {
-      anchor.remove();
-      URL.revokeObjectURL(url);
-    } catch {
-      // Best effort cleanup.
-    }
-  }, 0);
-}
-
-// ─── Formatting helpers ─────────────────────────────────────────
-
-function assertBenchmark(benchmark) {
-  if (!benchmark || typeof benchmark !== "object") {
-    throw new Error("BatataOuNao | benchmark inválido para relatório.");
-  }
-}
-
-function recommendedLabel(benchmark) {
-  if (benchmark.recommendedLabel) return benchmark.recommendedLabel;
-
-  const key =
-    benchmark.recommendation?.labelKey ?? tierToLabelKey(benchmark.tier);
-  if (key) return t(key, fallbackTierLabel(benchmark.tier));
-
-  return fallbackTierLabel(benchmark.tier);
-}
-
-function tierToLabelKey(tier) {
-  if (tier === 0) return "BATATAOU_NAO.Quality.Low";
-  if (tier === 1) return "BATATAOU_NAO.Quality.Medium";
-  if (tier === 2) return "BATATAOU_NAO.Quality.High";
-  return null;
-}
-
-function fallbackTierLabel(tier) {
-  if (tier === 0) return "Batata";
-  if (tier === 1) return "Batata Boa";
-  if (tier === 2) return "Premium";
-  return "—";
-}
-
 function t(key, fallback) {
   try {
     const value = globalThis.game?.i18n?.localize?.(key);
@@ -437,10 +28,435 @@ function t(key, fallback) {
   }
 }
 
+/**
+ * Cria um JournalEntry com relatório HTML renderizável.
+ *
+ * @param {Object} benchmark
+ * @param {Object|null} applySummary
+ * @returns {Promise<JournalEntry>}
+ */
+export async function createBenchmarkJournalReport(benchmark, applySummary = null) {
+  assertBenchmark(benchmark);
+
+  const createdAt = new Date();
+  const title = `${t("BATATAOU_NAO.Journal.EntryName", "Batata Ou Não Benchmark")} ${formatDate(createdAt)}`;
+
+  const entry = await JournalEntry.create({
+    name: title,
+    flags: {
+      [MODULE_ID]: {
+        type: "benchmark-report",
+        schemaVersion: REPORT_SCHEMA_VERSION,
+        createdAt: createdAt.toISOString(),
+        benchmark: toPlainData(benchmark),
+        applySummary: toPlainData(applySummary),
+      },
+    },
+    pages: [
+      makeTextPage(
+        t("BATATAOU_NAO.Journal.PageSummary", "Resumo Clínico"),
+        buildSummaryHtml(benchmark, applySummary, createdAt),
+      ),
+      makeTextPage(
+        t("BATATAOU_NAO.Journal.PageSceneRender", "Cena e Render"),
+        buildSceneRenderHtml(benchmark),
+      ),
+      makeTextPage(
+        t("BATATAOU_NAO.Journal.PageVitals", "Sinais Vitais"),
+        buildVitalsHtml(benchmark),
+      ),
+      makeTextPage(
+        t("BATATAOU_NAO.Journal.PageTechnicalPayload", "Payload Técnico"),
+        buildPayloadHtml(benchmark, applySummary, createdAt),
+      ),
+    ],
+  });
+
+  try {
+    entry?.sheet?.render?.(true);
+  } catch {
+    // Renderização da sheet não é obrigatória para a criação do Journal.
+  }
+
+  return entry;
+}
+
+/**
+ * Exporta relatório Markdown.
+ *
+ * @param {Object} benchmark
+ * @param {Object|null} applySummary
+ */
+export function exportBenchmarkMarkdown(benchmark, applySummary = null) {
+  assertBenchmark(benchmark);
+
+  const createdAt = new Date();
+  const filename = `batata-benchmark-${slugTimestamp(createdAt)}.md`;
+  const content = buildMarkdownReport(benchmark, applySummary, createdAt);
+
+  downloadTextFile(content, filename, "text/markdown;charset=utf-8");
+}
+
+/**
+ * Exporta relatório JSON.
+ *
+ * @param {Object} benchmark
+ * @param {Object|null} applySummary
+ */
+export function exportBenchmarkJson(benchmark, applySummary = null) {
+  assertBenchmark(benchmark);
+
+  const createdAt = new Date();
+  const filename = `batata-benchmark-${slugTimestamp(createdAt)}.json`;
+
+  const payload = {
+    module: MODULE_ID,
+    type: "benchmark-report",
+    schemaVersion: REPORT_SCHEMA_VERSION,
+    createdAt: createdAt.toISOString(),
+    foundry: globalThis.game?.version ?? null,
+    system: globalThis.game?.system?.id ?? null,
+    user: {
+      id: globalThis.game?.user?.id ?? null,
+      name: globalThis.game?.user?.name ?? null,
+    },
+    benchmark: toPlainData(benchmark),
+    applySummary: toPlainData(applySummary),
+  };
+
+  downloadTextFile(
+    JSON.stringify(payload, null, 2),
+    filename,
+    "application/json;charset=utf-8",
+  );
+}
+
+/**
+ * Cria página textual HTML.
+ *
+ * @param {string} name
+ * @param {string} content
+ * @returns {Object}
+ */
+function makeTextPage(name, content) {
+  return {
+    name,
+    type: "text",
+    text: {
+      format: getHtmlFormat(),
+      content,
+    },
+  };
+}
+
+/**
+ * Formato HTML do Journal.
+ *
+ * Foundry varia entre versões; se a constante não existir, HTML costuma ser 1.
+ *
+ * @returns {number}
+ */
+function getHtmlFormat() {
+  const formats = globalThis.CONST?.JOURNAL_ENTRY_PAGE_FORMATS ?? {};
+  return formats.HTML ?? formats.html ?? 1;
+}
+
+/**
+ * HTML: resumo clínico.
+ *
+ * @param {Object} benchmark
+ * @param {Object|null} applySummary
+ * @param {Date} createdAt
+ * @returns {string}
+ */
+function buildSummaryHtml(benchmark, applySummary, createdAt) {
+  const reasons = arrayOfText(
+    benchmark.recommendationReasons ??
+    benchmark.recommendation?.reasons ??
+    [],
+  );
+
+  const warnings = arrayOfText(benchmark.reliabilityWarnings ?? []);
+
+  return `
+    <section class="batata-journal-report">
+      <h1>${escapeHtml(t("BATATAOU_NAO.Journal.PageSummary", "Resumo Clínico"))}</h1>
+
+      <p>
+        <strong>${escapeHtml(t("BATATAOU_NAO.Journal.GeneratedAt", "Gerado em"))}:</strong>
+        ${escapeHtml(formatDate(createdAt))}
+      </p>
+
+      <ul>
+        <li><strong>Score:</strong> ${escapeHtml(valueOrDash(benchmark.score))}/100</li>
+        <li><strong>${escapeHtml(t("BATATAOU_NAO.Dialog.Recommended", "Recomendado"))}:</strong> ${escapeHtml(recommendedLabel(benchmark))}</li>
+        <li><strong>${escapeHtml(t("BATATAOU_NAO.HUD.Confidence", "Confiança"))}:</strong> ${escapeHtml(valueOrDash(benchmark.recommendation?.confidence))}</li>
+        <li><strong>FPS:</strong> ${escapeHtml(fps(benchmark.fps ?? benchmark.avgFps ?? benchmark.baseline?.avgFps))}</li>
+        <li><strong>${escapeHtml(t("BATATAOU_NAO.Metric.AvgFrame", "Frame médio"))}:</strong> ${escapeHtml(ms(benchmark.avgFrameMs ?? benchmark.baseline?.avgFrameMs))}</li>
+        <li><strong>${escapeHtml(t("BATATAOU_NAO.Metric.Stutter", "Stutter"))}:</strong> ${escapeHtml(pct(benchmark.stutterPct ?? benchmark.baseline?.stutterPct))}</li>
+        <li><strong>${escapeHtml(t("BATATAOU_NAO.Dialog.SceneWeight", "Peso da cena"))}:</strong> ${escapeHtml(valueOrDash(benchmark.sceneWeight?.score))}</li>
+        <li><strong>Foundry:</strong> ${escapeHtml(globalThis.game?.version ?? "—")}</li>
+        <li><strong>${escapeHtml(t("BATATAOU_NAO.Metric.MeasurementSource", "Fonte da medição"))}:</strong> ${escapeHtml(valueOrDash(benchmark.fpsSource ?? benchmark.baseline?.fpsSource))}</li>
+      </ul>
+
+      <h2>${escapeHtml(t("BATATAOU_NAO.HUD.Diagnosis", "Diagnóstico"))}</h2>
+      ${htmlListOrEmpty(reasons, t("BATATAOU_NAO.HUD.NoDiagnosis", "Nenhum diagnóstico disponível."))}
+
+      <h2>${escapeHtml(t("BATATAOU_NAO.Dialog.ReliabilityWarnings", "Avisos de confiabilidade"))}</h2>
+      ${htmlListOrEmpty(warnings, t("BATATAOU_NAO.HUD.NoWarnings", "Nenhum aviso crítico detectado."))}
+
+      ${applySummary ? `
+        <h2>${escapeHtml(t("BATATAOU_NAO.Journal.ApplySummary", "Aplicação de preset"))}</h2>
+        <ul>
+          <li><strong>Applied:</strong> ${escapeHtml(valueOrDash(applySummary.applied))}</li>
+          <li><strong>Skipped:</strong> ${escapeHtml(valueOrDash(applySummary.skipped))}</li>
+          <li><strong>Failed:</strong> ${escapeHtml(valueOrDash(applySummary.failed))}</li>
+        </ul>
+      ` : ""}
+    </section>
+  `;
+}
+
+/**
+ * HTML: cena/render.
+ *
+ * @param {Object} benchmark
+ * @returns {string}
+ */
+function buildSceneRenderHtml(benchmark) {
+  const sceneWeight = benchmark.sceneWeight ?? {};
+  const counts = sceneWeight.counts ?? benchmark.counts ?? {};
+  const gpuInfo = benchmark.gpuInfo ?? benchmark.gpu ?? {};
+
+  return `
+    <section class="batata-journal-report">
+      <h1>${escapeHtml(t("BATATAOU_NAO.Journal.PageSceneRender", "Cena e Render"))}</h1>
+
+      <h2>${escapeHtml(t("BATATAOU_NAO.Dialog.SceneWeight", "Peso da cena"))}</h2>
+      <ul>
+        <li><strong>Score:</strong> ${escapeHtml(valueOrDash(sceneWeight.score))}</li>
+        <li><strong>Tokens:</strong> ${escapeHtml(valueOrDash(counts.tokens))}</li>
+        <li><strong>${escapeHtml(t("BATATAOU_NAO.Scene.Lights", "luzes"))}:</strong> ${escapeHtml(valueOrDash(counts.lights))}</li>
+        <li><strong>${escapeHtml(t("BATATAOU_NAO.Scene.Walls", "paredes"))}:</strong> ${escapeHtml(valueOrDash(counts.walls))}</li>
+        <li><strong>${escapeHtml(t("BATATAOU_NAO.Scene.Tiles", "tiles"))}:</strong> ${escapeHtml(valueOrDash(counts.tiles))}</li>
+        <li><strong>${escapeHtml(t("BATATAOU_NAO.Scene.Drawings", "desenhos"))}:</strong> ${escapeHtml(valueOrDash(counts.drawings))}</li>
+        <li><strong>${escapeHtml(t("BATATAOU_NAO.Scene.Sounds", "sons"))}:</strong> ${escapeHtml(valueOrDash(counts.sounds))}</li>
+      </ul>
+
+      <h2>GPU / Renderer</h2>
+      <ul>
+        <li><strong>Renderer:</strong> ${escapeHtml(valueOrDash(gpuInfo.renderer))}</li>
+        <li><strong>Vendor:</strong> ${escapeHtml(valueOrDash(gpuInfo.vendor))}</li>
+        <li><strong>WebGL:</strong> ${escapeHtml(valueOrDash(gpuInfo.version))}</li>
+        <li><strong>Max texture size:</strong> ${escapeHtml(valueOrDash(gpuInfo.maxTextureSize))}</li>
+      </ul>
+    </section>
+  `;
+}
+
+/**
+ * HTML: vitals.
+ *
+ * @param {Object} benchmark
+ * @returns {string}
+ */
+function buildVitalsHtml(benchmark) {
+  const baseline = benchmark.baseline ?? benchmark;
+
+  return `
+    <section class="batata-journal-report">
+      <h1>${escapeHtml(t("BATATAOU_NAO.Journal.PageVitals", "Sinais Vitais"))}</h1>
+
+      <h2>${escapeHtml(t("BATATAOU_NAO.HUD.Body", "Corpo"))}</h2>
+      <ul>
+        <li><strong>${escapeHtml(t("BATATAOU_NAO.Metric.AvgFps", "FPS médio"))}:</strong> ${escapeHtml(fps(baseline.avgFps ?? benchmark.fps))}</li>
+        <li><strong>${escapeHtml(t("BATATAOU_NAO.Metric.Low1Fps", "1% low"))}:</strong> ${escapeHtml(fps(baseline.low1Fps))}</li>
+        <li><strong>${escapeHtml(t("BATATAOU_NAO.Metric.LongFrames", "Frames longos"))}:</strong> ${escapeHtml(valueOrDash(baseline.longFrames))}</li>
+        <li><strong>${escapeHtml(t("BATATAOU_NAO.Metric.Samples", "Amostras"))}:</strong> ${escapeHtml(valueOrDash(baseline.sampleCount))}</li>
+      </ul>
+
+      <h2>${escapeHtml(t("BATATAOU_NAO.HUD.Mind", "Mente"))}</h2>
+      <ul>
+        <li><strong>${escapeHtml(t("BATATAOU_NAO.Metric.AvgFrame", "Frame médio"))}:</strong> ${escapeHtml(ms(baseline.avgFrameMs))}</li>
+        <li><strong>p95:</strong> ${escapeHtml(ms(baseline.p95FrameMs))}</li>
+        <li><strong>p99:</strong> ${escapeHtml(ms(baseline.p99FrameMs))}</li>
+        <li><strong>${escapeHtml(t("BATATAOU_NAO.Metric.Stutter", "Stutter"))}:</strong> ${escapeHtml(pct(baseline.stutterPct))}</li>
+      </ul>
+
+      <h2>${escapeHtml(t("BATATAOU_NAO.HUD.Spirit", "Espírito"))}</h2>
+      <ul>
+        <li><strong>${escapeHtml(t("BATATAOU_NAO.Metric.MeasurementSource", "Fonte da medição"))}:</strong> ${escapeHtml(valueOrDash(baseline.fpsSource ?? benchmark.fpsSource))}</li>
+        <li><strong>${escapeHtml(t("BATATAOU_NAO.HUD.Confidence", "Confiança"))}:</strong> ${escapeHtml(valueOrDash(benchmark.recommendation?.confidence))}</li>
+        <li><strong>${escapeHtml(t("BATATAOU_NAO.Journal.Reliable", "Confiável"))}:</strong> ${escapeHtml(yesNo(benchmark.reliable))}</li>
+      </ul>
+    </section>
+  `;
+}
+
+/**
+ * HTML: payload compacto.
+ *
+ * @param {Object} benchmark
+ * @param {Object|null} applySummary
+ * @param {Date} createdAt
+ * @returns {string}
+ */
+function buildPayloadHtml(benchmark, applySummary, createdAt) {
+  const payload = {
+    module: MODULE_ID,
+    type: "benchmark-report",
+    schemaVersion: REPORT_SCHEMA_VERSION,
+    createdAt: createdAt.toISOString(),
+    foundry: globalThis.game?.version ?? null,
+    system: globalThis.game?.system?.id ?? null,
+    benchmark: compactBenchmarkPayload(benchmark),
+    applySummary: toPlainData(applySummary),
+  };
+
+  return `
+    <section class="batata-journal-report">
+      <h1>${escapeHtml(t("BATATAOU_NAO.Journal.PageTechnicalPayload", "Payload Técnico"))}</h1>
+      <p>${escapeHtml(t(
+        "BATATAOU_NAO.Journal.RawHint",
+        "Payload compacto para debug, issue ou comparação futura. O JSON completo deve ser exportado pelo botão Exportar JSON.",
+      ))}</p>
+      <pre style="white-space: pre-wrap; overflow-wrap: anywhere;">${escapeHtml(JSON.stringify(payload, null, 2))}</pre>
+    </section>
+  `;
+}
+
+/**
+ * Markdown export completo.
+ *
+ * @param {Object} benchmark
+ * @param {Object|null} applySummary
+ * @param {Date} createdAt
+ * @returns {string}
+ */
+function buildMarkdownReport(benchmark, applySummary, createdAt) {
+  const baseline = benchmark.baseline ?? benchmark;
+  const reasons = arrayOfText(
+    benchmark.recommendationReasons ??
+    benchmark.recommendation?.reasons ??
+    [],
+  );
+  const warnings = arrayOfText(benchmark.reliabilityWarnings ?? []);
+
+  const lines = [
+    `# ${t("BATATAOU_NAO.Journal.EntryName", "Batata Ou Não Benchmark")}`,
+    "",
+    `- **${t("BATATAOU_NAO.Journal.GeneratedAt", "Gerado em")}:** ${formatDate(createdAt)}`,
+    `- **Score:** ${valueOrDash(benchmark.score)}/100`,
+    `- **${t("BATATAOU_NAO.Dialog.Recommended", "Recomendado")}:** ${recommendedLabel(benchmark)}`,
+    `- **${t("BATATAOU_NAO.HUD.Confidence", "Confiança")}:** ${valueOrDash(benchmark.recommendation?.confidence)}`,
+    `- **FPS:** ${fps(benchmark.fps ?? baseline.avgFps)}`,
+    `- **${t("BATATAOU_NAO.Metric.AvgFrame", "Frame médio")}:** ${ms(benchmark.avgFrameMs ?? baseline.avgFrameMs)}`,
+    `- **${t("BATATAOU_NAO.Metric.Stutter", "Stutter")}:** ${pct(benchmark.stutterPct ?? baseline.stutterPct)}`,
+    "",
+    `## ${t("BATATAOU_NAO.HUD.Diagnosis", "Diagnóstico")}`,
+    "",
+    ...markdownListOrEmpty(reasons, t("BATATAOU_NAO.HUD.NoDiagnosis", "Nenhum diagnóstico disponível.")),
+    "",
+    `## ${t("BATATAOU_NAO.Dialog.ReliabilityWarnings", "Avisos de confiabilidade")}`,
+    "",
+    ...markdownListOrEmpty(warnings, t("BATATAOU_NAO.HUD.NoWarnings", "Nenhum aviso crítico detectado.")),
+    "",
+    `## ${t("BATATAOU_NAO.Journal.PageVitals", "Sinais Vitais")}`,
+    "",
+    `- **${t("BATATAOU_NAO.Metric.AvgFps", "FPS médio")}:** ${fps(baseline.avgFps)}`,
+    `- **${t("BATATAOU_NAO.Metric.Low1Fps", "1% low")}:** ${fps(baseline.low1Fps)}`,
+    `- **${t("BATATAOU_NAO.Metric.LongFrames", "Frames longos")}:** ${valueOrDash(baseline.longFrames)}`,
+    `- **${t("BATATAOU_NAO.Metric.Samples", "Amostras")}:** ${valueOrDash(baseline.sampleCount)}`,
+    `- **p95:** ${ms(baseline.p95FrameMs)}`,
+    `- **p99:** ${ms(baseline.p99FrameMs)}`,
+    "",
+    `## ${t("BATATAOU_NAO.Journal.PageSceneRender", "Cena e Render")}`,
+    "",
+    `- **${t("BATATAOU_NAO.Dialog.SceneWeight", "Peso da cena")}:** ${valueOrDash(benchmark.sceneWeight?.score)}`,
+    `- **Renderer:** ${valueOrDash(benchmark.gpuInfo?.renderer)}`,
+    `- **${t("BATATAOU_NAO.Metric.MeasurementSource", "Fonte da medição")}:** ${valueOrDash(baseline.fpsSource ?? benchmark.fpsSource)}`,
+  ];
+
+  if (applySummary) {
+    lines.push(
+      "",
+      `## ${t("BATATAOU_NAO.Journal.ApplySummary", "Aplicação de preset")}`,
+      "",
+      `- **Applied:** ${valueOrDash(applySummary.applied)}`,
+      `- **Skipped:** ${valueOrDash(applySummary.skipped)}`,
+      `- **Failed:** ${valueOrDash(applySummary.failed)}`,
+    );
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
+/**
+ * Baixa arquivo sem abrir blob externo quando Foundry oferece helper.
+ *
+ * @param {string} content
+ * @param {string} filename
+ * @param {string} mime
+ */
+function downloadTextFile(content, filename, mime) {
+  if (typeof globalThis.saveDataToFile === "function") {
+    globalThis.saveDataToFile(content, mime, filename);
+    return;
+  }
+
+  if (typeof globalThis.foundry?.utils?.saveDataToFile === "function") {
+    globalThis.foundry.utils.saveDataToFile(content, mime, filename);
+    return;
+  }
+
+  try {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+
+    a.href = url;
+    a.download = filename;
+    a.rel = "noopener";
+    a.style.display = "none";
+
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (err) {
+    console.error("BatataOuNao | Falha ao salvar arquivo:", err);
+
+    try {
+      globalThis.navigator?.clipboard?.writeText?.(content);
+      globalThis.ui?.notifications?.warn?.(
+        "Batata Ou Não | Não foi possível baixar o arquivo; conteúdo copiado para a área de transferência.",
+      );
+    } catch {
+      globalThis.ui?.notifications?.error?.(
+        "Batata Ou Não | Não foi possível exportar o relatório.",
+      );
+    }
+  }
+}
+
+function assertBenchmark(benchmark) {
+  if (!benchmark || typeof benchmark !== "object") {
+    throw new Error("Benchmark inválido ou ausente.");
+  }
+}
+
+function recommendedLabel(benchmark) {
+  const tier = benchmark.tier ?? benchmark.recommendation?.tier;
+  if (tier === 0) return t("BATATAOU_NAO.Quality.Low", "Batata");
+  if (tier === 1) return t("BATATAOU_NAO.Quality.Medium", "Batata Boa");
+  if (tier === 2) return t("BATATAOU_NAO.Quality.High", "Premium");
+  return valueOrDash(benchmark.recommendedLabel ?? benchmark.recommendation?.label);
+}
+
 function formatDate(date) {
   try {
-    const locale = globalThis.game?.i18n?.lang || undefined;
-    return new Intl.DateTimeFormat(locale, {
+    return new Intl.DateTimeFormat(globalThis.game?.i18n?.lang ?? undefined, {
       dateStyle: "short",
       timeStyle: "medium",
     }).format(date);
@@ -450,96 +466,113 @@ function formatDate(date) {
 }
 
 function slugTimestamp(date) {
-  return date.toISOString().replace(/[:.]/g, "-");
+  return date.toISOString().replaceAll(":", "-").replaceAll(".", "-");
 }
 
 function valueOrDash(value) {
   if (value === null || value === undefined || value === "") return "—";
-  if (typeof value === "number" && !Number.isFinite(value)) return "—";
-  return safeInline(value);
+  return String(value);
 }
 
 function fps(value) {
-  if (value === null || value === undefined || value === "") return "—";
-  return `${roundMaybe(value)} FPS`;
+  const number = Number(value);
+  return Number.isFinite(number) ? `${Math.round(number)} FPS` : "—";
 }
 
 function ms(value) {
-  if (value === null || value === undefined || value === "") return "—";
-  return `${roundMaybe(value)}ms`;
+  const number = Number(value);
+  return Number.isFinite(number) ? `${Math.round(number * 100) / 100}ms` : "—";
 }
 
 function pct(value) {
-  if (value === null || value === undefined || value === "") return "—";
-  return `${roundMaybe(value)}%`;
-}
-
-function roundMaybe(value) {
   const number = Number(value);
-  if (!Number.isFinite(number)) return safeInline(value);
-  return String(Math.round(number * 100) / 100);
+  return Number.isFinite(number) ? `${Math.round(number * 100) / 100}%` : "—";
 }
 
 function yesNo(value) {
-  if (value === true) return "Sim";
-  if (value === false) return "Não";
+  if (value === true) return t("BATATAOU_NAO.Journal.Reliable", "Confiável");
+  if (value === false) return t("BATATAOU_NAO.Journal.Unreliable", "Não confiável");
   return "—";
 }
 
 function arrayOfText(value) {
   if (!Array.isArray(value)) return [];
-  return value
-    .map((item) => safeInline(item))
-    .filter((item) => item && item !== "—");
+  return value.map((item) => String(item ?? "").trim()).filter(Boolean);
 }
 
-function safeInline(value) {
-  const text = safePlain(value);
-  if (text === "—") return text;
+function htmlListOrEmpty(items, emptyText) {
+  if (!items.length) {
+    return `<p>${escapeHtml(emptyText)}</p>`;
+  }
 
-  return text
-    .replace(/\r?\n+/g, " ")
-    .replace(/[<>]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  return `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
 }
 
-function safePlain(value) {
-  if (value === null || value === undefined || value === "") return "—";
+function markdownListOrEmpty(items, emptyText) {
+  if (!items.length) return [`- ${emptyText}`];
+  return items.map((item) => `- ${item}`);
+}
 
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
+function compactBenchmarkPayload(benchmark) {
+  const data = toPlainData(benchmark) ?? {};
+
+  const sampleKeys = [
+    "samples",
+    "fpsSamples",
+    "frameSamples",
+    "frameMsSamples",
+    "qualitySamples",
+    "stutterSamples",
+    "chart",
+  ];
+
+  const summary = { ...data };
+
+  for (const key of sampleKeys) {
+    const value = summary[key];
+
+    if (Array.isArray(value)) {
+      summary[`${key}Count`] = value.length;
+      delete summary[key];
+    } else if (value && typeof value === "object") {
+      summary[`${key}Keys`] = Object.keys(value);
+      summary[`${key}Counts`] = Object.fromEntries(
+        Object.entries(value).map(([childKey, childValue]) => [
+          childKey,
+          Array.isArray(childValue) ? childValue.length : null,
+        ]),
+      );
+      delete summary[key];
+    }
   }
 
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
+  if (summary.baseline && typeof summary.baseline === "object") {
+    for (const key of sampleKeys) {
+      if (Array.isArray(summary.baseline[key])) {
+        summary.baseline[`${key}Count`] = summary.baseline[key].length;
+        delete summary.baseline[key];
+      }
+    }
   }
+
+  return summary;
 }
 
 function toPlainData(value) {
+  if (value === null || value === undefined) return value;
+
   try {
-    if (globalThis.foundry?.utils?.deepClone) {
-      return foundry.utils.deepClone(value);
-    }
+    return JSON.parse(JSON.stringify(value));
   } catch {
-    // Fallback abaixo.
+    return String(value);
   }
+}
 
-  const seen = new WeakSet();
-
-  return JSON.parse(
-    JSON.stringify(value, (_key, nestedValue) => {
-      if (typeof nestedValue === "function") return undefined;
-
-      if (nestedValue && typeof nestedValue === "object") {
-        if (seen.has(nestedValue)) return "[Circular]";
-        seen.add(nestedValue);
-      }
-
-      return nestedValue;
-    }),
-  );
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }

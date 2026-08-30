@@ -1,6 +1,6 @@
 {{! ============================================================ }}
-{{! BATATA OU NÃO — Dialog Template v2                          }}
-{{! Nova versão: semântica ARIA, protocolos dinâmicos, exports  }}
+{{! BATATA OU NÃO — Dialog Template v2.0.12                     }}
+{{! Runtime hotfix: FPS vivo explícito + imagens com fallback    }}
 {{! ============================================================ }}
 
 <div
@@ -124,7 +124,6 @@
         {{ localize "BATATAOU_NAO.HUD.Vitals" }}
       </h2>
 
-      {{! Corpo }}
       <article class="batata-vital-panel batata-vital-body">
         <div class="batata-vital-heading">
           <span class="batata-vital-dot" aria-hidden="true"></span>
@@ -169,7 +168,6 @@
         {{/if}}
       </article>
 
-      {{! Mente }}
       <article class="batata-vital-panel batata-vital-mind">
         <div class="batata-vital-heading">
           <span class="batata-vital-dot" aria-hidden="true"></span>
@@ -214,7 +212,6 @@
         {{/if}}
       </article>
 
-      {{! Espírito }}
       <article class="batata-vital-panel batata-vital-spirit">
         <div class="batata-vital-heading">
           <span class="batata-vital-dot" aria-hidden="true"></span>
@@ -282,15 +279,23 @@
         <span>{{ localize "BATATAOU_NAO.HUD.LiveDiagnostics" }}</span>
       </div>
 
+      <p class="batata-graph-disclaimer">
+        FPS é atualizado ao vivo enquanto a HUD está aberta. Frame médio e stutter são snapshots do último benchmark.
+      </p>
+
       <div
         class="batata-graphs-grid"
         role="group"
         aria-label="{{ localize 'BATATAOU_NAO.HUD.GraphsGroup' }}"
       >
-        <figure class="batata-graph-card graph-body">
-          <figcaption class="batata-graph-title">FPS</figcaption>
+        <figure class="batata-graph-card graph-body graph-live">
+          <figcaption class="batata-graph-title">
+            FPS <span class="batata-live-pill">AO VIVO</span>
+          </figcaption>
+
           <div
             class="batata-graph-frame"
+            data-live-fps-graph
             role="img"
             aria-label="{{ localize 'BATATAOU_NAO.HUD.GraphFpsDesc' }}"
           >
@@ -298,10 +303,12 @@
           </div>
         </figure>
 
-        <figure class="batata-graph-card graph-mind">
+        <figure class="batata-graph-card graph-mind graph-snapshot">
           <figcaption class="batata-graph-title">
             {{ localize "BATATAOU_NAO.Metric.AvgFrame" }}
+            <span class="batata-snapshot-pill">SNAPSHOT</span>
           </figcaption>
+
           <div
             class="batata-graph-frame"
             role="img"
@@ -311,10 +318,12 @@
           </div>
         </figure>
 
-        <figure class="batata-graph-card graph-spirit">
+        <figure class="batata-graph-card graph-spirit graph-snapshot">
           <figcaption class="batata-graph-title">
             {{ localize "BATATAOU_NAO.Metric.Stutter" }}
+            <span class="batata-snapshot-pill">SNAPSHOT</span>
           </figcaption>
+
           <div
             class="batata-graph-frame"
             role="img"
@@ -495,10 +504,16 @@
         </div>
 
         <div class="batata-card-img">
+          <div class="batata-card-img-fallback" aria-hidden="true">
+            <i class="fas fa-seedling"></i>
+            <span>{{ protocol.name }}</span>
+          </div>
+
           <img
             src="{{ protocol.image }}"
             alt="{{ protocol.imageAlt }}"
-            loading="lazy"
+            loading="eager"
+            decoding="async"
             width="320"
             height="150"
           >
@@ -621,6 +636,7 @@
 
       <div
         class="batata-monitor-graph"
+        data-monitor-fps-graph
         role="img"
         aria-label="{{ localize 'BATATAOU_NAO.HUD.MonitorGraphDesc' }}"
       >
