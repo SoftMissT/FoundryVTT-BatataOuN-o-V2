@@ -181,7 +181,7 @@
         <div class="batata-vital-main">
           <div class="batata-vital-big">
             {{#if benchmark.fpsAvailable}}
-              {{ benchmark.fps }}
+              <span data-live-current-fps>{{ benchmark.fps }}</span>
             {{else}}
               <span aria-hidden="true">--</span>
               <span class="visually-hidden">{{ localize "BATATAOU_NAO.HUD.NoData" }}</span>
@@ -195,7 +195,7 @@
         <dl class="batata-vital-list">
           <div class="batata-vital-row">
             <dt>{{ localize "BATATAOU_NAO.Metric.AvgFps" }}</dt>
-            <dd>{{ benchmark.baseline.avgFps }}</dd>
+            <dd data-live-avg-fps>{{ benchmark.baseline.avgFps }}</dd>
           </div>
 
           <div class="batata-vital-row">
@@ -225,7 +225,7 @@
         <div class="batata-vital-main">
           <div class="batata-vital-big">
             {{#if benchmark.avgFrameMs}}
-              {{ benchmark.avgFrameMs }}
+              <span data-live-frame-ms>{{ benchmark.avgFrameMs }}</span>
             {{else}}
               <span aria-hidden="true">--</span>
               <span class="visually-hidden">{{ localize "BATATAOU_NAO.HUD.NoData" }}</span>
@@ -239,7 +239,7 @@
         <dl class="batata-vital-list">
           <div class="batata-vital-row">
             <dt>{{ localize "BATATAOU_NAO.Metric.AvgFrame" }}</dt>
-            <dd>{{ benchmark.baseline.avgFrameMs }}ms</dd>
+            <dd data-live-avg-frame>{{ benchmark.baseline.avgFrameMs }}ms</dd>
           </div>
 
           <div class="batata-vital-row">
@@ -254,7 +254,7 @@
 
           <div class="batata-vital-row">
             <dt>{{ localize "BATATAOU_NAO.Metric.Stutter" }}</dt>
-            <dd>{{ benchmark.baseline.stutterPct }}%</dd>
+            <dd data-live-stutter>{{ benchmark.baseline.stutterPct }}%</dd>
           </div>
         </dl>
         {{/if}}
@@ -327,7 +327,7 @@
       </div>
 
       <p class="batata-graph-disclaimer">
-        FPS é atualizado ao vivo enquanto a HUD está aberta. Frame médio e stutter são snapshots do último benchmark.
+        FPS, frame médio e stutter são atualizados ao vivo enquanto a HUD está aberta.
       </p>
 
       <div
@@ -350,31 +350,33 @@
           </div>
         </figure>
 
-        <figure class="batata-graph-card graph-mind graph-snapshot">
+        <figure class="batata-graph-card graph-mind graph-live">
           <figcaption class="batata-graph-title">
             {{ localize "BATATAOU_NAO.Metric.AvgFrame" }}
-            <span class="batata-snapshot-pill">SNAPSHOT</span>
+            <span class="batata-live-pill">AO VIVO</span>
           </figcaption>
 
           <div
             class="batata-graph-frame"
             role="img"
             aria-label="{{ localize 'BATATAOU_NAO.HUD.GraphFrameDesc' }}"
+            data-live-frame-graph
           >
             {{{ benchmark.graphs.frameSvg }}}
           </div>
         </figure>
 
-        <figure class="batata-graph-card graph-spirit graph-snapshot">
+        <figure class="batata-graph-card graph-spirit graph-live">
           <figcaption class="batata-graph-title">
             {{ localize "BATATAOU_NAO.Metric.Stutter" }}
-            <span class="batata-snapshot-pill">SNAPSHOT</span>
+            <span class="batata-live-pill">AO VIVO</span>
           </figcaption>
 
           <div
             class="batata-graph-frame"
             role="img"
             aria-label="{{ localize 'BATATAOU_NAO.HUD.GraphQualityDesc' }}"
+            data-live-stutter-graph
           >
             {{{ benchmark.graphs.qualitySvg }}}
           </div>

@@ -178,15 +178,57 @@ function extractBenchmarkSamples(benchmark) {
   };
 }
 
-function buildBenchmarkGraphs(benchmark) {
-  const samples = extractBenchmarkSamples(benchmark);
+function buildFrameMsHistoryFromFps(fpsValues) {
+  return fpsValues
+    .map((fpsValue) => {
+      const fpsNumber = finiteNumber(fpsValue);
+      if (!fpsNumber || fpsNumber <= 0) return null;
+      return 1000 / fpsNumber;
+    })
+    .filter((value) => value !== null);
+}
 
+function buildStutterHistoryFromFrameMs(frameValues) {
+  const numbers = frameValues.map(finiteNumber).filter((value) => value !== null);
+
+  if (numbers.length < 2) return [];
+
+  return numbers.map((_, index) => {
+    const startIndex = Math.max(0, index - 29);
+    const slice = numbers.slice(startIndex, index + 1);
+    const longFrames = slice.filter((value) => value >= 33.34).length;
+
+    return slice.length ? (longFrames / slice.length) * 100 : 0;
+  });
+}
+
+function getLiveFpsValues() {
   let liveFps = [];
+
   try {
     liveFps = getFpsHistory();
   } catch {
     liveFps = [];
   }
+
+  if (Array.isArray(liveFps) && liveFps.length >= 2) {
+    return liveFps.map(finiteNumber).filter((value) => value !== null);
+  }
+
+  try {
+    const state = getMonitorState();
+    const current = finiteNumber(state?.currentFps);
+    if (current !== null) return [current, current];
+  } catch {
+    // sem monitor
+  }
+
+  return [];
+}
+
+function buildLiveGraphs(benchmark = null) {
+  const samples = extractBenchmarkSamples(benchmark);
+  const liveFps = getLiveFpsValues();
 
   const fallbackFps = benchmark?.fpsAvailable
     ? [benchmark.fps, benchmark.fps]
@@ -196,28 +238,38 @@ function buildBenchmarkGraphs(benchmark) {
     ? [benchmark.avgFrameMs, benchmark.avgFrameMs]
     : [];
 
-  const fallbackQuality =
+  const fallbackStutter =
     benchmark?.stutterPct !== undefined && benchmark?.stutterPct !== null
       ? [benchmark.stutterPct, benchmark.stutterPct]
       : [];
 
-  const fpsValues =
-    liveFps.length >= 2
-      ? liveFps
-      : samples.fps.length
-        ? samples.fps
-        : fallbackFps;
+  const fpsValues = liveFps.length >= 2
+    ? liveFps
+    : samples.fps.length
+      ? samples.fps
+      : fallbackFps;
 
-  const frameValues = samples.frameMs.length ? samples.frameMs : fallbackFrame;
-  const qualityValues = samples.quality.length
-    ? samples.quality
-    : fallbackQuality;
+  const liveFrameValues = buildFrameMsHistoryFromFps(fpsValues);
+
+  const frameValues = liveFrameValues.length >= 2
+    ? liveFrameValues
+    : samples.frameMs.length
+      ? samples.frameMs
+      : fallbackFrame;
+
+  const liveStutterValues = buildStutterHistoryFromFrameMs(frameValues);
+
+  const stutterValues = liveStutterValues.length >= 2
+    ? liveStutterValues
+    : samples.quality.length
+      ? samples.quality
+      : fallbackStutter;
 
   return {
     available:
       fpsValues.length >= 2 ||
       frameValues.length >= 2 ||
-      qualityValues.length >= 2,
+      stutterValues.length >= 2,
 
     fpsSvg: createSparklineSvg(fpsValues, {
       label: "FPS LIVE",
@@ -225,32 +277,60 @@ function buildBenchmarkGraphs(benchmark) {
     }),
 
     frameSvg: createSparklineSvg(frameValues, {
-      label: t("BATATAOU_NAO.Metric.AvgFrame", "Frame médio"),
+      label: "FRAME MS LIVE",
       color: "#FF93FF",
       invert: true,
     }),
 
-    qualitySvg: createSparklineSvg(qualityValues, {
-      label: t("BATATAOU_NAO.Metric.Stutter", "Stutter"),
+    qualitySvg: createSparklineSvg(stutterValues, {
+      label: "STUTTER LIVE",
       color: "#0EF5FF",
       invert: true,
     }),
   };
 }
 
+function buildBenchmarkGraphs(benchmark) {
+  return buildLiveGraphs(benchmark);
+}
+
 function buildMonitorGraphSvg(label = "FPS LIVE") {
-  let history = [];
-
-  try {
-    history = getFpsHistory();
-  } catch {
-    history = [];
-  }
-
-  return createSparklineSvg(history, {
+  return createSparklineSvg(getLiveFpsValues(), {
     label,
     color: "#A4FE23",
   });
+}
+
+function buildLiveMetrics(monitorState = null) {
+  const fpsValues = getLiveFpsValues();
+  const frameValues = buildFrameMsHistoryFromFps(fpsValues);
+  const stutterValues = buildStutterHistoryFromFrameMs(frameValues);
+
+  const currentFps =
+    finiteNumber(monitorState?.currentFps) ??
+    fpsValues[fpsValues.length - 1] ??
+    null;
+
+  const avgFps =
+    finiteNumber(monitorState?.avgFps) ??
+    (fpsValues.length
+      ? fpsValues.reduce((sum, value) => sum + value, 0) / fpsValues.length
+      : null);
+
+  const currentFrameMs =
+    frameValues[frameValues.length - 1] ??
+    (currentFps ? 1000 / currentFps : null);
+
+  const currentStutter =
+    stutterValues[stutterValues.length - 1] ??
+    0;
+
+  return {
+    currentFps,
+    avgFps,
+    currentFrameMs,
+    currentStutter,
+  };
 }
 
 export class PotatoDialog extends foundry.applications.api.HandlebarsApplicationMixin(
@@ -285,6 +365,7 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
   #benchmarkDone = Boolean(getSetting(SETTING_KEYS.BENCHMARK_RESULT));
   #overrideConfirmed = false;
   #tickHandler = null;
+  #liveHudTimer = null;
   #lastApplySummary = null;
   #exportRunning = false;
   #journalRunning = false;
@@ -339,6 +420,7 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
     this.#bindGranularControls();
     this.#bindSubmitGate();
     this.#bindMonitorTick();
+    this.#startLiveHudLoop();
     this.#bindProtocolImageFallbacks();
 
     try {
@@ -353,6 +435,8 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
       Hooks.off("BatataOuNaoMonitorTick", this.#tickHandler);
       this.#tickHandler = null;
     }
+
+    this.#stopLiveHudLoop();
 
     if (!getSetting(SETTING_KEYS.HAS_BEEN_PROMPTED)) {
       await setSetting(SETTING_KEYS.HAS_BEEN_PROMPTED, true);
@@ -375,6 +459,26 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
     } catch (err) {
       console.warn("BatataOuNao | Não foi possível iniciar monitor vivo:", err);
     }
+  }
+
+  #startLiveHudLoop() {
+    this.#stopLiveHudLoop();
+
+    this.#liveHudTimer = globalThis.setInterval(() => {
+      try {
+        this.#ensureLiveMonitor();
+        this.#updateMonitorDom(getMonitorState());
+      } catch (err) {
+        console.warn("BatataOuNao | Falha no loop vivo da HUD:", err);
+      }
+    }, 500);
+  }
+
+  #stopLiveHudLoop() {
+    if (!this.#liveHudTimer) return;
+
+    globalThis.clearInterval(this.#liveHudTimer);
+    this.#liveHudTimer = null;
   }
 
   #bindQualityCards() {
@@ -562,22 +666,64 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
   #updateMonitorDom(monitorState) {
     if (!this.element) return;
 
+    const metrics = buildLiveMetrics(monitorState);
+    const graphs = buildLiveGraphs(this.#benchmarkResult);
+
     const currentEl = this.element.querySelector("[data-monitor-current]");
     const avgEl = this.element.querySelector("[data-monitor-avg]");
 
-    if (currentEl) currentEl.textContent = String(monitorState.currentFps);
-    if (avgEl) avgEl.textContent = String(monitorState.avgFps);
+    if (currentEl && metrics.currentFps !== null) {
+      currentEl.textContent = String(Math.round(metrics.currentFps));
+    }
 
-    const liveSvg = buildMonitorGraphSvg("FPS LIVE");
+    if (avgEl && metrics.avgFps !== null) {
+      avgEl.textContent = String(Math.round(metrics.avgFps));
+    }
+
+    const liveCurrentFps = this.element.querySelector("[data-live-current-fps]");
+    const liveAvgFps = this.element.querySelector("[data-live-avg-fps]");
+    const liveFrameMs = this.element.querySelector("[data-live-frame-ms]");
+    const liveAvgFrame = this.element.querySelector("[data-live-avg-frame]");
+    const liveStutter = this.element.querySelector("[data-live-stutter]");
+
+    if (liveCurrentFps && metrics.currentFps !== null) {
+      liveCurrentFps.textContent = String(Math.round(metrics.currentFps));
+    }
+
+    if (liveAvgFps && metrics.avgFps !== null) {
+      liveAvgFps.textContent = String(Math.round(metrics.avgFps));
+    }
+
+    if (liveFrameMs && metrics.currentFrameMs !== null) {
+      liveFrameMs.textContent = String(Math.round(metrics.currentFrameMs * 100) / 100);
+    }
+
+    if (liveAvgFrame && metrics.currentFrameMs !== null) {
+      liveAvgFrame.textContent = `${Math.round(metrics.currentFrameMs * 100) / 100}ms`;
+    }
+
+    if (liveStutter && metrics.currentStutter !== null) {
+      liveStutter.textContent = `${Math.round(metrics.currentStutter * 100) / 100}%`;
+    }
 
     const monitorGraph = this.element.querySelector("[data-monitor-fps-graph]");
     if (monitorGraph) {
-      monitorGraph.innerHTML = liveSvg;
+      monitorGraph.innerHTML = graphs.fpsSvg;
     }
 
-    const mainFpsGraph = this.element.querySelector("[data-live-fps-graph]");
-    if (mainFpsGraph) {
-      mainFpsGraph.innerHTML = liveSvg;
+    const fpsGraph = this.element.querySelector("[data-live-fps-graph]");
+    if (fpsGraph) {
+      fpsGraph.innerHTML = graphs.fpsSvg;
+    }
+
+    const frameGraph = this.element.querySelector("[data-live-frame-graph]");
+    if (frameGraph) {
+      frameGraph.innerHTML = graphs.frameSvg;
+    }
+
+    const stutterGraph = this.element.querySelector("[data-live-stutter-graph]");
+    if (stutterGraph) {
+      stutterGraph.innerHTML = graphs.qualitySvg;
     }
   }
 

@@ -1065,3 +1065,75 @@
     transition-duration: 0.001ms !important;
   }
 }
+/* ═══════════════════════════════════════════════════════════════
+   BATATA HUD v1.0.14 — Scroll + live HUD fix
+   ═══════════════════════════════════════════════════════════════ */
+
+#batata-ou-nao-dialog {
+  max-height: calc(100vh - 32px);
+}
+
+#batata-ou-nao-dialog .window-content {
+  max-height: calc(100vh - 72px);
+  overflow: hidden;
+}
+
+#batata-ou-nao-dialog .standard-form {
+  min-height: 0;
+  max-height: calc(100vh - 76px);
+  overflow: hidden;
+}
+
+#batata-ou-nao-dialog .batata-dialog,
+#batata-ou-nao-dialog .batata-hud {
+  min-height: 0;
+  max-height: calc(100vh - 86px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  padding-right: 18px;
+}
+
+#batata-ou-nao-dialog .batata-dialog::-webkit-scrollbar,
+#batata-ou-nao-dialog .batata-hud::-webkit-scrollbar {
+  width: 10px;
+}
+
+#batata-ou-nao-dialog .batata-dialog::-webkit-scrollbar-track,
+#batata-ou-nao-dialog .batata-hud::-webkit-scrollbar-track {
+  background: rgba(8, 0, 8, 0.78);
+  border-radius: 999px;
+}
+
+#batata-ou-nao-dialog .batata-dialog::-webkit-scrollbar-thumb,
+#batata-ou-nao-dialog .batata-hud::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #ff93ff, #0ef5ff);
+  border: 2px solid rgba(8, 0, 8, 0.9);
+  border-radius: 999px;
+}
+
+#batata-ou-nao-dialog .batata-vital-row {
+  grid-template-columns: minmax(96px, 0.48fr) minmax(0, 1fr);
+}
+
+#batata-ou-nao-dialog .batata-vital-row dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+#batata-ou-nao-dialog .batata-vital-spirit .batata-vital-row dd {
+  font-size: 0.74rem;
+  line-height: 1.22;
+}
+
+#batata-ou-nao-dialog .graph-live .batata-graph-frame {
+  border-color: rgba(164, 254, 35, 0.3);
+  box-shadow:
+    inset 0 0 18px rgba(164, 254, 35, 0.06),
+    0 0 16px rgba(164, 254, 35, 0.05);
+}
+
+#batata-ou-nao-dialog .batata-snapshot-pill {
+  display: none;
+}

@@ -14,6 +14,18 @@ This project follows the spirit of [Keep a Changelog](https://keepachangelog.com
 
 ---
 
+## [1.0.14] - 2026-08-29
+
+### Fixed
+- Fixed HUD body not scrolling when content exceeded the Foundry window height.
+- Fixed frozen HUD graphs by adding an independent live refresh loop.
+- Changed frame time and stutter graphs from benchmark snapshots to live derived metrics.
+- Improved long renderer text wrapping in the Spirit panel.
+
+### Changed
+- FPS, frame time, and stutter graphs now refresh while the HUD remains open.
+
+
 ## [1.0.13] - 2026-08-29
 
 ### Fixed
