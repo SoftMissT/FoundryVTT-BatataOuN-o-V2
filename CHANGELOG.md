@@ -14,6 +14,14 @@ This project follows the spirit of [Keep a Changelog](https://keepachangelog.com
 
 ---
 
+## [1.0.17] - 2026-08-29
+
+### Fixed
+- Ignored optional Foundry settings that are not registered in the current Foundry version instead of counting them as skipped preset failures.
+- Prevented missing optional settings such as `core.lightSoftEdges`, `core.msaa`, and `core.smaa` from triggering partial preset warnings.
+- Improved quality preset compatibility across Foundry versions.
+
+
 ## [1.0.16] - 2026-08-29
 
 ### Fixed

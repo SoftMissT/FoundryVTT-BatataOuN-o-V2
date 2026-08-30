@@ -18,6 +18,7 @@ import {
   batchSetSettings,
   validateQualityLevel,
   debugLog,
+  resolveSettingKey,
 } from "./utils.js";
 import { getSetting, setSetting, SETTING_KEYS } from "./settings.js";
 import { applyGranular } from "./granular.js";
@@ -235,6 +236,45 @@ function mergeGranularUpdates(updates, level) {
 }
 
 /**
+ * Separa updates aplicáveis de settings inexistentes nesta versão do Foundry.
+ *
+ * Settings inexistentes não são erro e não devem gerar "preset parcial".
+ * Eles são compatibilidade opcional entre versões.
+ *
+ * @param {Array<{module: string, setting: string, value: any, candidates?: string[]}>} updates
+ * @returns {{
+ *   supported: Array<{module: string, setting: string, value: any, candidates?: string[]}>,
+ *   ignored: Array<Object>
+ * }}
+ */
+function splitSupportedUpdates(updates) {
+  const supported = [];
+  const ignored = [];
+
+  for (const update of updates) {
+    const candidates = update.candidates ?? [update.setting];
+    const key = resolveSettingKey(update.module, candidates);
+
+    if (key) {
+      supported.push(update);
+      continue;
+    }
+
+    ignored.push({
+      status: "ignored",
+      module: update.module,
+      setting: update.setting,
+      key: null,
+      value: update.value,
+      reason: "not-registered-optional",
+      candidates,
+    });
+  }
+
+  return { supported, ignored };
+}
+
+/**
  * Aplica um nível de qualidade.
  *
  * Retorno:
@@ -258,10 +298,14 @@ export async function applyQuality(level) {
   const preset = getPresetForLevel(level);
   const baseUpdates = presetToUpdates(preset);
   const updates = mergeGranularUpdates(baseUpdates, level);
+  const { supported, ignored } = splitSupportedUpdates(updates);
 
-  debugLog(`Aplicando qualidade ${level}`, updates);
+  debugLog(`Aplicando qualidade ${level}`, {
+    supported,
+    ignored,
+  });
 
-  const summary = await batchSetSettings(updates);
+  const summary = await batchSetSettings(supported);
 
   await setSetting(SETTING_KEYS.POTATO_LEVEL, level);
 
@@ -269,12 +313,13 @@ export async function applyQuality(level) {
     level,
     applied: summary.applied,
     skipped: summary.skipped,
+    ignored: ignored.length,
     failed: summary.failed,
-    details: summary.details,
+    details: [...summary.details, ...ignored],
   };
 
   debugLog(
-    `Qualidade ${level} aplicada: ${result.applied} ok, ${result.skipped} pulados, ${result.failed} falhas`,
+    `Qualidade ${level} aplicada: ${result.applied} ok, ${result.skipped} pulados, ${result.ignored} ignorados opcionais, ${result.failed} falhas`,
     result.details,
   );
 
