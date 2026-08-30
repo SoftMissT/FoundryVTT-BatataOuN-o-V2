@@ -1056,9 +1056,9 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
       );
     } else if (summary.skipped > 0) {
       notify(
-        "warn",
+        "info",
         "BATATAOU_NAO.Notify.PresetPartial",
-        "Batata Ou Não | Preset parcialmente aplicado. Alguns ajustes não existem nesta versão do Foundry.",
+        "Batata Ou Não | Preset aplicado. Alguns ajustes opcionais não existem nesta versão do Foundry e foram ignorados.",
       );
     } else {
       notify(

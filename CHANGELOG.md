@@ -14,6 +14,14 @@ This project follows the spirit of [Keep a Changelog](https://keepachangelog.com
 
 ---
 
+## [1.0.16] - 2026-08-29
+
+### Fixed
+- Removed remaining noisy warning path from partial preset application.
+- Changed optional skipped preset settings from warning notification to info notification.
+- Reduced false-positive diagnostic noise when Foundry skips settings that do not exist in the current version.
+
+
 ## [1.0.15] - 2026-08-29
 
 ### Fixed
