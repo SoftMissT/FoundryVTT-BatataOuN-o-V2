@@ -322,13 +322,10 @@ function buildMarkdownReport(benchmark, applySummary, createdAt) {
 }
 
 function downloadTextFile(content, filename, mime) {
-  if (typeof globalThis.saveDataToFile === "function") {
-    globalThis.saveDataToFile(content, mime, filename);
-    return;
-  }
+  const saveDataToFile = globalThis.foundry?.utils?.saveDataToFile;
 
-  if (typeof globalThis.foundry?.utils?.saveDataToFile === "function") {
-    globalThis.foundry.utils.saveDataToFile(content, mime, filename);
+  if (typeof saveDataToFile === "function") {
+    saveDataToFile(content, mime, filename);
     return;
   }
 

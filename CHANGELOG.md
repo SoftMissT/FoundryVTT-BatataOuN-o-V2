@@ -14,6 +14,13 @@ This project follows the spirit of [Keep a Changelog](https://keepachangelog.com
 
 ---
 
+## [1.0.15] - 2026-08-29
+
+### Fixed
+- Removed deprecated global `saveDataToFile` access in benchmark Markdown/JSON exports.
+- Export now uses `foundry.utils.saveDataToFile` directly when available, avoiding Foundry v13/v14 compatibility warnings.
+
+
 ## [1.0.14] - 2026-08-29
 
 ### Fixed
