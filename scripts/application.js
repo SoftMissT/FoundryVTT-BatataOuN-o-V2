@@ -1,12 +1,13 @@
 /**
  * ApplicationV2 — Diálogo Batata Ou Não.
  *
- * Correções v1.0.12:
- * - Protocolos dinâmicos mantidos.
- * - Monitor FPS iniciado quando a HUD abre, sem auto-ajuste automático.
- * - Gráfico FPS principal atualizado ao vivo via BatataOuNaoMonitorTick.
- * - Caminhos de assets centralizados.
- * - Export Journal/Markdown/JSON continua delegado para journal.js.
+ * v1.0.12 runtime hotfix:
+ * - Protocolos com imagens visíveis no topo da HUD.
+ * - Fallback visual para imagem quebrada.
+ * - Monitor FPS iniciado ao abrir a HUD, sem auto-ajuste.
+ * - Gráfico FPS principal atualizado ao vivo.
+ * - Frame médio e stutter marcados como snapshot.
+ * - Journal/Markdown/JSON delegados para journal.js.
  *
  * @module application
  */
@@ -20,11 +21,7 @@ import {
   setGranularFeature,
   resetGranular,
 } from "./granular.js";
-import {
-  startMonitor,
-  getMonitorState,
-  getFpsHistory,
-} from "./monitor.js";
+import { startMonitor, getMonitorState, getFpsHistory } from "./monitor.js";
 import {
   createBenchmarkJournalReport,
   exportBenchmarkMarkdown,
@@ -33,23 +30,10 @@ import {
 
 const MODULE_ID = "batata-ou-nao";
 
-/**
- * Caminho seguro para assets do módulo.
- *
- * @param {string} path
- * @returns {string}
- */
 function assetPath(path) {
   return `modules/${MODULE_ID}/${String(path).replace(/^\/+/, "")}`;
 }
 
-/**
- * Localiza texto com fallback seguro.
- *
- * @param {string} key
- * @param {string} fallback
- * @returns {string}
- */
 function t(key, fallback) {
   try {
     const value = globalThis.game?.i18n?.localize?.(key);
@@ -59,13 +43,6 @@ function t(key, fallback) {
   }
 }
 
-/**
- * Notificação defensiva.
- *
- * @param {"info"|"warn"|"error"} type
- * @param {string} key
- * @param {string} fallback
- */
 function notify(type, key, fallback) {
   try {
     globalThis.ui?.notifications?.[type]?.(t(key, fallback));
@@ -74,11 +51,6 @@ function notify(type, key, fallback) {
   }
 }
 
-/**
- * Refit seguro da janela ApplicationV2.
- *
- * @param {foundry.applications.api.ApplicationV2} app
- */
 function refitSoon(app) {
   try {
     requestAnimationFrame(() => app?._refit?.());
@@ -87,12 +59,6 @@ function refitSoon(app) {
   }
 }
 
-/**
- * Resolve label localizado de qualidade.
- *
- * @param {number|null|undefined} level
- * @returns {string|null}
- */
 function qualityLabel(level) {
   if (level === null || level === undefined) return null;
 
@@ -102,12 +68,6 @@ function qualityLabel(level) {
   return t(key, key);
 }
 
-/**
- * Escapa texto para SVG inline.
- *
- * @param {string|number|null|undefined} value
- * @returns {string}
- */
 function escapeSvg(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -116,27 +76,11 @@ function escapeSvg(value) {
     .replaceAll('"', "&quot;");
 }
 
-/**
- * Número finito ou null.
- *
- * @param {unknown} value
- * @returns {number|null}
- */
 function finiteNumber(value) {
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
 
-/**
- * Cria sparkline SVG leve.
- *
- * @param {unknown[]} values
- * @param {Object} options
- * @param {string} options.label
- * @param {string} options.color
- * @param {boolean} [options.invert=false]
- * @returns {string}
- */
 function createSparklineSvg(values, { label, color, invert = false }) {
   const numbers = values.map(finiteNumber).filter((value) => value !== null);
 
@@ -205,22 +149,12 @@ function createSparklineSvg(values, { label, color, invert = false }) {
   `;
 }
 
-/**
- * Extrai amostras de benchmark com compatibilidade entre formatos.
- *
- * @param {Object|null} benchmark
- * @returns {{ fps: number[], frameMs: number[], quality: number[] }}
- */
 function extractBenchmarkSamples(benchmark) {
   if (!benchmark) return { fps: [], frameMs: [], quality: [] };
 
   const samples = benchmark.samples ?? benchmark.chart ?? {};
 
-  const fps =
-    samples.fps ??
-    samples.fpsSamples ??
-    benchmark.fpsSamples ??
-    [];
+  const fps = samples.fps ?? samples.fpsSamples ?? benchmark.fpsSamples ?? [];
 
   const frameMs =
     samples.frameMs ??
@@ -244,13 +178,6 @@ function extractBenchmarkSamples(benchmark) {
   };
 }
 
-/**
- * Cria gráficos de benchmark.
- * O FPS usa histórico vivo quando existir; senão cai para amostras do benchmark.
- *
- * @param {Object|null} benchmark
- * @returns {Object}
- */
 function buildBenchmarkGraphs(benchmark) {
   const samples = extractBenchmarkSamples(benchmark);
 
@@ -274,14 +201,17 @@ function buildBenchmarkGraphs(benchmark) {
       ? [benchmark.stutterPct, benchmark.stutterPct]
       : [];
 
-  const fpsValues = liveFps.length >= 2
-    ? liveFps
-    : samples.fps.length
-      ? samples.fps
-      : fallbackFps;
+  const fpsValues =
+    liveFps.length >= 2
+      ? liveFps
+      : samples.fps.length
+        ? samples.fps
+        : fallbackFps;
 
   const frameValues = samples.frameMs.length ? samples.frameMs : fallbackFrame;
-  const qualityValues = samples.quality.length ? samples.quality : fallbackQuality;
+  const qualityValues = samples.quality.length
+    ? samples.quality
+    : fallbackQuality;
 
   return {
     available:
@@ -291,7 +221,7 @@ function buildBenchmarkGraphs(benchmark) {
 
     fpsSvg: createSparklineSvg(fpsValues, {
       label: "FPS LIVE",
-      color: "#C1000C",
+      color: "#A4FE23",
     }),
 
     frameSvg: createSparklineSvg(frameValues, {
@@ -308,12 +238,6 @@ function buildBenchmarkGraphs(benchmark) {
   };
 }
 
-/**
- * Gráfico vivo do monitor.
- *
- * @param {string} [label="FPS LIVE"]
- * @returns {string}
- */
 function buildMonitorGraphSvg(label = "FPS LIVE") {
   let history = [];
 
@@ -437,10 +361,6 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
     await super._onClose(options);
   }
 
-  /**
-   * Liga monitor ao abrir a HUD.
-   * Importante: autoAdjust=false para não alterar qualidade sozinho.
-   */
   #ensureLiveMonitor() {
     try {
       if (!globalThis.canvas?.ready) return;
@@ -478,11 +398,13 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
       card.removeAttribute("active");
       card.classList.remove("active");
       card.setAttribute("aria-checked", "false");
+      card.setAttribute("tabindex", "-1");
     });
 
     el.setAttribute("active", "true");
     el.classList.add("active");
     el.setAttribute("aria-checked", "true");
+    el.setAttribute("tabindex", "0");
 
     this.#selectedLevel = Number(el.dataset.level);
     this.#overrideConfirmed = false;
@@ -608,26 +530,35 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
   }
 
   #bindProtocolImageFallbacks() {
-    this.element.querySelectorAll(".batata-card-img img").forEach((img) => {
-      img.loading = "eager";
-      img.decoding = "async";
-
-      img.addEventListener("error", () => {
+    this.element
+      .querySelectorAll("[data-batata-protocol-image]")
+      .forEach((img) => {
         const box = img.closest(".batata-card-img");
         if (!box) return;
 
-        box.classList.add("is-missing-image");
-        box.dataset.missingImage = "true";
-        img.remove();
-      }, { once: true });
-    });
+        const markMissing = () => {
+          box.classList.add("is-missing-image");
+          img.style.display = "none";
+        };
+
+        const markLoaded = () => {
+          box.classList.remove("is-missing-image");
+          img.style.display = "";
+        };
+
+        img.loading = "eager";
+        img.decoding = "async";
+
+        img.addEventListener("error", markMissing, { once: true });
+        img.addEventListener("load", markLoaded, { once: true });
+
+        if (img.complete) {
+          if (img.naturalWidth > 0) markLoaded();
+          else markMissing();
+        }
+      });
   }
 
-  /**
-   * Atualiza números e gráficos vivos sem rerender pesado.
-   *
-   * @param {{ currentFps: number, avgFps: number }} monitorState
-   */
   #updateMonitorDom(monitorState) {
     if (!this.element) return;
 
@@ -639,15 +570,12 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
 
     const liveSvg = buildMonitorGraphSvg("FPS LIVE");
 
-    const monitorGraph = this.element.querySelector(".batata-monitor-graph");
+    const monitorGraph = this.element.querySelector("[data-monitor-fps-graph]");
     if (monitorGraph) {
       monitorGraph.innerHTML = liveSvg;
     }
 
-    const mainFpsGraph = this.element.querySelector(
-      ".batata-graphs-section .graph-body .batata-graph-frame",
-    );
-
+    const mainFpsGraph = this.element.querySelector("[data-live-fps-graph]");
     if (mainFpsGraph) {
       mainFpsGraph.innerHTML = liveSvg;
     }
@@ -910,6 +838,7 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
         ),
         image: assetPath("assets/batata_fraco.webp"),
         imageAlt: t("BATATAOU_NAO.Quality.Low", "Batata"),
+        fallbackIcon: "fas fa-seedling",
         active: Number(this.#selectedLevel) === 0,
       },
       {
@@ -921,6 +850,7 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
         ),
         image: assetPath("assets/batata_boa.webp"),
         imageAlt: t("BATATAOU_NAO.Quality.Medium", "Batata Boa"),
+        fallbackIcon: "fas fa-shield-halved",
         active: Number(this.#selectedLevel) === 1,
       },
       {
@@ -932,6 +862,7 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
         ),
         image: assetPath("assets/batata_premium.webp"),
         imageAlt: t("BATATAOU_NAO.Quality.High", "Premium"),
+        fallbackIcon: "fas fa-crown",
         active: Number(this.#selectedLevel) === 2,
       },
     ];

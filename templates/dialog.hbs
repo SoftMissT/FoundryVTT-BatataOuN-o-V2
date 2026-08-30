@@ -1,6 +1,6 @@
 {{! ============================================================ }}
 {{! BATATA OU NÃO — Dialog Template v2.0.12                     }}
-{{! Runtime hotfix: FPS vivo explícito + imagens com fallback    }}
+{{! Runtime hotfix: imagens visíveis + FPS vivo explícito        }}
 {{! ============================================================ }}
 
 <div
@@ -11,7 +11,6 @@
   aria-describedby="batata-dialog-subline"
 >
 
-  {{! ── HEADER ──────────────────────────────────────────────── }}
   <header class="batata-hud-header">
     <div class="batata-hud-title-wrap">
       <div class="batata-hud-kicker" id="batata-dialog-kicker">
@@ -58,7 +57,58 @@
     </div>
   </header>
 
-  {{! ── BENCHMARK RESULTS ───────────────────────────────────── }}
+  <section
+    class="batata-protocols-section batata-protocols-top"
+    aria-labelledby="batata-protocols-heading"
+    role="radiogroup"
+    aria-label="{{ localize 'BATATAOU_NAO.HUD.ProtocolSelection' }}"
+  >
+    <div class="batata-section-title" id="batata-protocols-heading">
+      <i class="fas fa-shield-halved" aria-hidden="true"></i>
+      <span>{{ localize "BATATAOU_NAO.HUD.Protocols" }}</span>
+    </div>
+
+    <div class="batata-cards">
+      {{#each protocols as |protocol|}}
+      <article
+        class="batata-card {{#if protocol.active}}active{{/if}}"
+        data-level="{{ protocol.level }}"
+        role="radio"
+        aria-checked="{{#if protocol.active}}true{{else}}false{{/if}}"
+        tabindex="{{#if protocol.active}}0{{else}}-1{{/if}}"
+        aria-label="{{ protocol.name }}: {{ protocol.description }}"
+        {{#if protocol.active}}active="true"{{/if}}
+      >
+        <div class="batata-card-badge">
+          {{ localize "BATATAOU_NAO.HUD.Protocol" }}
+        </div>
+
+        <div class="batata-card-img">
+          <div class="batata-card-img-fallback" aria-hidden="true">
+            <i class="{{ protocol.fallbackIcon }}"></i>
+            <span>{{ protocol.name }}</span>
+          </div>
+
+          <img
+            src="{{ protocol.image }}"
+            alt="{{ protocol.imageAlt }}"
+            loading="eager"
+            decoding="async"
+            width="320"
+            height="150"
+            data-batata-protocol-image
+          >
+        </div>
+
+        <div class="batata-card-text">
+          <h2>{{ protocol.name }}</h2>
+          <p>{{ protocol.description }}</p>
+        </div>
+      </article>
+      {{/each}}
+    </div>
+  </section>
+
   {{#if benchmark}}
   <div
     class="batata-hud-results"
@@ -66,7 +116,6 @@
     aria-label="{{ localize 'BATATAOU_NAO.HUD.ResultsRegion' }}"
   >
 
-    {{! ── OVERVIEW ──────────────────────────────────────────── }}
     <section class="batata-hud-overview" aria-labelledby="batata-overview-heading">
       <h2 class="visually-hidden" id="batata-overview-heading">
         {{ localize "BATATAOU_NAO.HUD.Overview" }}
@@ -118,7 +167,6 @@
       </article>
     </section>
 
-    {{! ── VITALS ────────────────────────────────────────────── }}
     <section class="batata-vitals-grid" aria-labelledby="batata-vitals-heading">
       <h2 class="visually-hidden" id="batata-vitals-heading">
         {{ localize "BATATAOU_NAO.HUD.Vitals" }}
@@ -272,7 +320,6 @@
       </article>
     </section>
 
-    {{! ── GRAPHS ────────────────────────────────────────────── }}
     <section class="batata-graphs-section" aria-labelledby="batata-graphs-heading">
       <div class="batata-section-title" id="batata-graphs-heading">
         <i class="fas fa-wave-square" aria-hidden="true"></i>
@@ -335,7 +382,6 @@
       </div>
     </section>
 
-    {{! ── DIAGNOSIS ─────────────────────────────────────────── }}
     <section class="batata-diagnosis-grid" aria-labelledby="batata-diagnosis-heading">
       <h2 class="visually-hidden" id="batata-diagnosis-heading">
         {{ localize "BATATAOU_NAO.HUD.DiagnosisRegion" }}
@@ -380,7 +426,6 @@
       </article>
     </section>
 
-    {{! ── TECHNICAL NOTES ───────────────────────────────────── }}
     {{#if benchmark.notes}}
     <section class="batata-tech-notes" aria-labelledby="batata-notes-heading">
       <div class="batata-section-title" id="batata-notes-heading">
@@ -399,7 +444,6 @@
   </div>
   {{/if}}
 
-  {{! ── ACTION BUTTONS ──────────────────────────────────────── }}
   <fieldset class="batata-action-grid">
     <legend class="visually-hidden">
       {{ localize "BATATAOU_NAO.HUD.Actions" }}
@@ -459,7 +503,6 @@
     </button>
   </fieldset>
 
-  {{! ── STATUS MESSAGES ─────────────────────────────────────── }}
   <div class="batata-status-messages" role="status" aria-live="polite" aria-atomic="true">
     {{#unless benchmarkDone}}
     <p class="batata-bench-required">
@@ -476,59 +519,6 @@
     {{/if}}
   </div>
 
-  {{! ── PROTOCOL CARDS ──────────────────────────────────────── }}
-  <section
-    class="batata-protocols-section"
-    aria-labelledby="batata-protocols-heading"
-    role="radiogroup"
-    aria-label="{{ localize 'BATATAOU_NAO.HUD.ProtocolSelection' }}"
-  >
-    <div class="batata-section-title" id="batata-protocols-heading">
-      <i class="fas fa-shield-halved" aria-hidden="true"></i>
-      <span>{{ localize "BATATAOU_NAO.HUD.Protocols" }}</span>
-    </div>
-
-    <div class="batata-cards">
-      {{#each protocols as |protocol|}}
-      <article
-        class="batata-card {{#if protocol.active}}active{{/if}}"
-        data-level="{{ protocol.level }}"
-        role="radio"
-        aria-checked="{{#if protocol.active}}true{{else}}false{{/if}}"
-        tabindex="0"
-        aria-label="{{ protocol.name }}: {{ protocol.description }}"
-        {{#if protocol.active}}active="true"{{/if}}
-      >
-        <div class="batata-card-badge">
-          {{ localize "BATATAOU_NAO.HUD.Protocol" }}
-        </div>
-
-        <div class="batata-card-img">
-          <div class="batata-card-img-fallback" aria-hidden="true">
-            <i class="fas fa-seedling"></i>
-            <span>{{ protocol.name }}</span>
-          </div>
-
-          <img
-            src="{{ protocol.image }}"
-            alt="{{ protocol.imageAlt }}"
-            loading="eager"
-            decoding="async"
-            width="320"
-            height="150"
-          >
-        </div>
-
-        <div class="batata-card-text">
-          <h2>{{ protocol.name }}</h2>
-          <p>{{ protocol.description }}</p>
-        </div>
-      </article>
-      {{/each}}
-    </div>
-  </section>
-
-  {{! ── GRANULAR CONTROLS ───────────────────────────────────── }}
   <details class="batata-granular hud-box">
     <summary class="batata-details-summary">
       <span>
@@ -603,7 +593,6 @@
     </div>
   </details>
 
-  {{! ── LIVE MONITOR ────────────────────────────────────────── }}
   {{#if monitorActive}}
   <section class="batata-monitor hud-box" aria-labelledby="batata-monitor-heading">
     <div class="batata-section-title" id="batata-monitor-heading">
@@ -646,7 +635,6 @@
   </section>
   {{/if}}
 
-  {{! ── FOOTER ──────────────────────────────────────────────── }}
   <footer class="form-footer batata-hud-footer">
     <button
       type="submit"

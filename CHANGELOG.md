@@ -14,7 +14,7 @@ This project follows the spirit of [Keep a Changelog](https://keepachangelog.com
 
 ---
 
-## [1.0.12] - 2026-08-29
+## [1.0.13] - 2026-08-29
 
 ### Fixed
 - Fixed benchmark Journal pages rendering raw Markdown in Foundry by generating HTML Journal content.

@@ -1,7 +1,7 @@
 /**
  * Benchmark Journal + exports.
  *
- * Correções v1.0.12:
+ * v1.0.12 runtime hotfix:
  * - Journal usa HTML real em vez de Markdown cru.
  * - Export Markdown/JSON usa saveDataToFile quando disponível.
  * - Payload do Journal é compacto para não poluir a página.
@@ -12,13 +12,6 @@
 const MODULE_ID = "batata-ou-nao";
 const REPORT_SCHEMA_VERSION = 3;
 
-/**
- * Localiza texto com fallback seguro.
- *
- * @param {string} key
- * @param {string} fallback
- * @returns {string}
- */
 function t(key, fallback) {
   try {
     const value = globalThis.game?.i18n?.localize?.(key);
@@ -28,14 +21,10 @@ function t(key, fallback) {
   }
 }
 
-/**
- * Cria um JournalEntry com relatório HTML renderizável.
- *
- * @param {Object} benchmark
- * @param {Object|null} applySummary
- * @returns {Promise<JournalEntry>}
- */
-export async function createBenchmarkJournalReport(benchmark, applySummary = null) {
+export async function createBenchmarkJournalReport(
+  benchmark,
+  applySummary = null,
+) {
   assertBenchmark(benchmark);
 
   const createdAt = new Date();
@@ -75,18 +64,12 @@ export async function createBenchmarkJournalReport(benchmark, applySummary = nul
   try {
     entry?.sheet?.render?.(true);
   } catch {
-    // Renderização da sheet não é obrigatória para a criação do Journal.
+    // A criação do Journal já foi concluída; renderizar a sheet é opcional.
   }
 
   return entry;
 }
 
-/**
- * Exporta relatório Markdown.
- *
- * @param {Object} benchmark
- * @param {Object|null} applySummary
- */
 export function exportBenchmarkMarkdown(benchmark, applySummary = null) {
   assertBenchmark(benchmark);
 
@@ -97,12 +80,6 @@ export function exportBenchmarkMarkdown(benchmark, applySummary = null) {
   downloadTextFile(content, filename, "text/markdown;charset=utf-8");
 }
 
-/**
- * Exporta relatório JSON.
- *
- * @param {Object} benchmark
- * @param {Object|null} applySummary
- */
 export function exportBenchmarkJson(benchmark, applySummary = null) {
   assertBenchmark(benchmark);
 
@@ -131,13 +108,6 @@ export function exportBenchmarkJson(benchmark, applySummary = null) {
   );
 }
 
-/**
- * Cria página textual HTML.
- *
- * @param {string} name
- * @param {string} content
- * @returns {Object}
- */
 function makeTextPage(name, content) {
   return {
     name,
@@ -149,31 +119,14 @@ function makeTextPage(name, content) {
   };
 }
 
-/**
- * Formato HTML do Journal.
- *
- * Foundry varia entre versões; se a constante não existir, HTML costuma ser 1.
- *
- * @returns {number}
- */
 function getHtmlFormat() {
   const formats = globalThis.CONST?.JOURNAL_ENTRY_PAGE_FORMATS ?? {};
   return formats.HTML ?? formats.html ?? 1;
 }
 
-/**
- * HTML: resumo clínico.
- *
- * @param {Object} benchmark
- * @param {Object|null} applySummary
- * @param {Date} createdAt
- * @returns {string}
- */
 function buildSummaryHtml(benchmark, applySummary, createdAt) {
   const reasons = arrayOfText(
-    benchmark.recommendationReasons ??
-    benchmark.recommendation?.reasons ??
-    [],
+    benchmark.recommendationReasons ?? benchmark.recommendation?.reasons ?? [],
   );
 
   const warnings = arrayOfText(benchmark.reliabilityWarnings ?? []);
@@ -205,24 +158,22 @@ function buildSummaryHtml(benchmark, applySummary, createdAt) {
       <h2>${escapeHtml(t("BATATAOU_NAO.Dialog.ReliabilityWarnings", "Avisos de confiabilidade"))}</h2>
       ${htmlListOrEmpty(warnings, t("BATATAOU_NAO.HUD.NoWarnings", "Nenhum aviso crítico detectado."))}
 
-      ${applySummary ? `
+      ${
+        applySummary
+          ? `
         <h2>${escapeHtml(t("BATATAOU_NAO.Journal.ApplySummary", "Aplicação de preset"))}</h2>
         <ul>
           <li><strong>Applied:</strong> ${escapeHtml(valueOrDash(applySummary.applied))}</li>
           <li><strong>Skipped:</strong> ${escapeHtml(valueOrDash(applySummary.skipped))}</li>
           <li><strong>Failed:</strong> ${escapeHtml(valueOrDash(applySummary.failed))}</li>
         </ul>
-      ` : ""}
+      `
+          : ""
+      }
     </section>
   `;
 }
 
-/**
- * HTML: cena/render.
- *
- * @param {Object} benchmark
- * @returns {string}
- */
 function buildSceneRenderHtml(benchmark) {
   const sceneWeight = benchmark.sceneWeight ?? {};
   const counts = sceneWeight.counts ?? benchmark.counts ?? {};
@@ -254,12 +205,6 @@ function buildSceneRenderHtml(benchmark) {
   `;
 }
 
-/**
- * HTML: vitals.
- *
- * @param {Object} benchmark
- * @returns {string}
- */
 function buildVitalsHtml(benchmark) {
   const baseline = benchmark.baseline ?? benchmark;
 
@@ -293,14 +238,6 @@ function buildVitalsHtml(benchmark) {
   `;
 }
 
-/**
- * HTML: payload compacto.
- *
- * @param {Object} benchmark
- * @param {Object|null} applySummary
- * @param {Date} createdAt
- * @returns {string}
- */
 function buildPayloadHtml(benchmark, applySummary, createdAt) {
   const payload = {
     module: MODULE_ID,
@@ -316,29 +253,16 @@ function buildPayloadHtml(benchmark, applySummary, createdAt) {
   return `
     <section class="batata-journal-report">
       <h1>${escapeHtml(t("BATATAOU_NAO.Journal.PageTechnicalPayload", "Payload Técnico"))}</h1>
-      <p>${escapeHtml(t(
-        "BATATAOU_NAO.Journal.RawHint",
-        "Payload compacto para debug, issue ou comparação futura. O JSON completo deve ser exportado pelo botão Exportar JSON.",
-      ))}</p>
+      <p>${escapeHtml("Payload compacto para debug. O JSON completo deve ser exportado pelo botão Exportar JSON.")}</p>
       <pre style="white-space: pre-wrap; overflow-wrap: anywhere;">${escapeHtml(JSON.stringify(payload, null, 2))}</pre>
     </section>
   `;
 }
 
-/**
- * Markdown export completo.
- *
- * @param {Object} benchmark
- * @param {Object|null} applySummary
- * @param {Date} createdAt
- * @returns {string}
- */
 function buildMarkdownReport(benchmark, applySummary, createdAt) {
   const baseline = benchmark.baseline ?? benchmark;
   const reasons = arrayOfText(
-    benchmark.recommendationReasons ??
-    benchmark.recommendation?.reasons ??
-    [],
+    benchmark.recommendationReasons ?? benchmark.recommendation?.reasons ?? [],
   );
   const warnings = arrayOfText(benchmark.reliabilityWarnings ?? []);
 
@@ -355,11 +279,17 @@ function buildMarkdownReport(benchmark, applySummary, createdAt) {
     "",
     `## ${t("BATATAOU_NAO.HUD.Diagnosis", "Diagnóstico")}`,
     "",
-    ...markdownListOrEmpty(reasons, t("BATATAOU_NAO.HUD.NoDiagnosis", "Nenhum diagnóstico disponível.")),
+    ...markdownListOrEmpty(
+      reasons,
+      t("BATATAOU_NAO.HUD.NoDiagnosis", "Nenhum diagnóstico disponível."),
+    ),
     "",
     `## ${t("BATATAOU_NAO.Dialog.ReliabilityWarnings", "Avisos de confiabilidade")}`,
     "",
-    ...markdownListOrEmpty(warnings, t("BATATAOU_NAO.HUD.NoWarnings", "Nenhum aviso crítico detectado.")),
+    ...markdownListOrEmpty(
+      warnings,
+      t("BATATAOU_NAO.HUD.NoWarnings", "Nenhum aviso crítico detectado."),
+    ),
     "",
     `## ${t("BATATAOU_NAO.Journal.PageVitals", "Sinais Vitais")}`,
     "",
@@ -391,13 +321,6 @@ function buildMarkdownReport(benchmark, applySummary, createdAt) {
   return `${lines.join("\n")}\n`;
 }
 
-/**
- * Baixa arquivo sem abrir blob externo quando Foundry oferece helper.
- *
- * @param {string} content
- * @param {string} filename
- * @param {string} mime
- */
 function downloadTextFile(content, filename, mime) {
   if (typeof globalThis.saveDataToFile === "function") {
     globalThis.saveDataToFile(content, mime, filename);
@@ -451,7 +374,9 @@ function recommendedLabel(benchmark) {
   if (tier === 0) return t("BATATAOU_NAO.Quality.Low", "Batata");
   if (tier === 1) return t("BATATAOU_NAO.Quality.Medium", "Batata Boa");
   if (tier === 2) return t("BATATAOU_NAO.Quality.High", "Premium");
-  return valueOrDash(benchmark.recommendedLabel ?? benchmark.recommendation?.label);
+  return valueOrDash(
+    benchmark.recommendedLabel ?? benchmark.recommendation?.label,
+  );
 }
 
 function formatDate(date) {
@@ -491,7 +416,8 @@ function pct(value) {
 
 function yesNo(value) {
   if (value === true) return t("BATATAOU_NAO.Journal.Reliable", "Confiável");
-  if (value === false) return t("BATATAOU_NAO.Journal.Unreliable", "Não confiável");
+  if (value === false)
+    return t("BATATAOU_NAO.Journal.Unreliable", "Não confiável");
   return "—";
 }
 
