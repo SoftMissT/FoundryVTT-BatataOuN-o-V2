@@ -209,11 +209,10 @@
 }
 
 #batata-ou-nao-dialog .batata-card:hover,
-#batata-ou-nao-dialog .batata-card:focus {
+#batata-ou-nao-dialog .batata-card:focus-visible {
   transform: translateY(-1px);
   border-color: rgba(248, 235, 77, 0.55);
   box-shadow: 0 0 20px rgba(248, 235, 77, 0.12);
-  outline: none;
 }
 
 #batata-ou-nao-dialog .batata-card.active,
@@ -1136,4 +1135,79 @@
 
 #batata-ou-nao-dialog .batata-snapshot-pill {
   display: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BATATA HUD v1.0.18 — visual system + low-cost rendering pass
+   ═══════════════════════════════════════════════════════════════ */
+
+#batata-ou-nao-dialog {
+  color-scheme: dark;
+  container-type: inline-size;
+  isolation: isolate;
+  --batata-c-focus: #ffffff;
+  --batata-c-surface-raised: rgba(41, 3, 27, 0.82);
+  --batata-shadow-panel: 0 14px 34px rgba(0, 0, 0, 0.28);
+}
+
+#batata-ou-nao-dialog .batata-dialog,
+#batata-ou-nao-dialog .batata-hud {
+  contain: layout style;
+  text-wrap: pretty;
+}
+
+#batata-ou-nao-dialog .batata-hud-header,
+#batata-ou-nao-dialog .batata-protocols-section,
+#batata-ou-nao-dialog .batata-overview-card,
+#batata-ou-nao-dialog .batata-vital-panel,
+#batata-ou-nao-dialog .batata-graphs-section,
+#batata-ou-nao-dialog .batata-diagnosis-card,
+#batata-ou-nao-dialog .batata-tech-notes {
+  box-shadow: var(--batata-shadow-panel);
+}
+
+#batata-ou-nao-dialog .batata-card:focus-visible,
+#batata-ou-nao-dialog button:focus-visible,
+#batata-ou-nao-dialog select:focus-visible,
+#batata-ou-nao-dialog input:focus-visible {
+  outline: 3px solid var(--batata-c-focus);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(14, 245, 255, 0.28);
+}
+
+#batata-ou-nao-dialog .batata-card:hover,
+#batata-ou-nao-dialog .batata-card:focus-visible {
+  transform: translateY(-2px);
+}
+
+#batata-ou-nao-dialog .batata-card-img img {
+  content-visibility: auto;
+  contain: paint;
+}
+
+#batata-ou-nao-dialog .batata-graph-card,
+#batata-ou-nao-dialog .batata-diagnosis-card,
+#batata-ou-nao-dialog .batata-tech-notes {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 140px;
+}
+
+@container (max-width: 880px) {
+  #batata-ou-nao-dialog .batata-cards,
+  #batata-ou-nao-dialog .batata-graphs-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (max-width: 560px) {
+  #batata-ou-nao-dialog .batata-cards,
+  #batata-ou-nao-dialog .batata-graphs-grid,
+  #batata-ou-nao-dialog .batata-vitals-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #batata-ou-nao-dialog .batata-card-img {
+    height: 112px;
+    min-height: 112px;
+  }
 }

@@ -14,6 +14,7 @@
 
 import { getCurrentQuality, applyQuality, QUALITY_LABELS } from "./quality.js";
 import { getSetting, setSetting, SETTING_KEYS } from "./settings.js";
+import { debugLog } from "./utils.js";
 import { runBenchmark, detectGPU } from "./benchmark.js";
 import {
   getGranularState,
@@ -189,7 +190,9 @@ function buildFrameMsHistoryFromFps(fpsValues) {
 }
 
 function buildStutterHistoryFromFrameMs(frameValues) {
-  const numbers = frameValues.map(finiteNumber).filter((value) => value !== null);
+  const numbers = frameValues
+    .map(finiteNumber)
+    .filter((value) => value !== null);
 
   if (numbers.length < 2) return [];
 
@@ -243,27 +246,30 @@ function buildLiveGraphs(benchmark = null) {
       ? [benchmark.stutterPct, benchmark.stutterPct]
       : [];
 
-  const fpsValues = liveFps.length >= 2
-    ? liveFps
-    : samples.fps.length
-      ? samples.fps
-      : fallbackFps;
+  const fpsValues =
+    liveFps.length >= 2
+      ? liveFps
+      : samples.fps.length
+        ? samples.fps
+        : fallbackFps;
 
   const liveFrameValues = buildFrameMsHistoryFromFps(fpsValues);
 
-  const frameValues = liveFrameValues.length >= 2
-    ? liveFrameValues
-    : samples.frameMs.length
-      ? samples.frameMs
-      : fallbackFrame;
+  const frameValues =
+    liveFrameValues.length >= 2
+      ? liveFrameValues
+      : samples.frameMs.length
+        ? samples.frameMs
+        : fallbackFrame;
 
   const liveStutterValues = buildStutterHistoryFromFrameMs(frameValues);
 
-  const stutterValues = liveStutterValues.length >= 2
-    ? liveStutterValues
-    : samples.quality.length
-      ? samples.quality
-      : fallbackStutter;
+  const stutterValues =
+    liveStutterValues.length >= 2
+      ? liveStutterValues
+      : samples.quality.length
+        ? samples.quality
+        : fallbackStutter;
 
   return {
     available:
@@ -321,9 +327,7 @@ function buildLiveMetrics(monitorState = null) {
     frameValues[frameValues.length - 1] ??
     (currentFps ? 1000 / currentFps : null);
 
-  const currentStutter =
-    stutterValues[stutterValues.length - 1] ??
-    0;
+  const currentStutter = stutterValues[stutterValues.length - 1] ?? 0;
 
   return {
     currentFps,
@@ -369,6 +373,7 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
   #lastApplySummary = null;
   #exportRunning = false;
   #journalRunning = false;
+  #eventAbortController = null;
 
   async _prepareContext() {
     this.#ensureLiveMonitor();
@@ -410,6 +415,9 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
   async _onRender(context, options) {
     await super._onRender(context, options);
 
+    this.#eventAbortController?.abort();
+    this.#eventAbortController = new AbortController();
+
     this.#ensureLiveMonitor();
 
     refitSoon(this);
@@ -431,6 +439,9 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
   }
 
   async _onClose(options) {
+    this.#eventAbortController?.abort();
+    this.#eventAbortController = null;
+
     if (this.#tickHandler) {
       Hooks.off("BatataOuNaoMonitorTick", this.#tickHandler);
       this.#tickHandler = null;
@@ -457,7 +468,7 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
         sampleSize: 120,
       });
     } catch (err) {
-      console.warn("BatataOuNao | Não foi possível iniciar monitor vivo:", err);
+      debugLog("Não foi possível iniciar monitor vivo", err);
     }
   }
 
@@ -469,7 +480,7 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
         this.#ensureLiveMonitor();
         this.#updateMonitorDom(getMonitorState());
       } catch (err) {
-        console.warn("BatataOuNao | Falha no loop vivo da HUD:", err);
+        debugLog("Falha no loop vivo da HUD", err);
       }
     }, 500);
   }
@@ -482,18 +493,30 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
   }
 
   #bindQualityCards() {
+    const signal = this.#eventAbortController?.signal;
     this.element.querySelectorAll(".batata-card").forEach((el) => {
       el.addEventListener("click", (event) => {
         event.preventDefault();
         this.#selectQualityCard(el);
-      });
+      }, { signal });
 
       el.addEventListener("keydown", (event) => {
+        if (["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown"].includes(event.key)) {
+          event.preventDefault();
+          const cards = [...this.element.querySelectorAll(".batata-card")];
+          const index = cards.indexOf(el);
+          const direction = event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 1;
+          const next = cards[(index + direction + cards.length) % cards.length];
+          next?.focus();
+          if (next) this.#selectQualityCard(next);
+          return;
+        }
+
         if (event.key !== "Enter" && event.key !== " ") return;
 
         event.preventDefault();
         this.#selectQualityCard(el);
-      });
+      }, { signal });
     });
   }
 
@@ -526,7 +549,7 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
 
       if (this.#benchmarkRunning) return;
       await this.#runBenchmark();
-    });
+    }, { signal: this.#eventAbortController?.signal });
   }
 
   #bindJournalButtons() {
@@ -540,7 +563,7 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
         event.stopPropagation();
 
         await this.#generateJournal();
-      });
+      }, { signal: this.#eventAbortController?.signal });
     }
 
     const exportMdBtn = this.element.querySelector("#batata-export-md-btn");
@@ -553,7 +576,7 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
         event.stopPropagation();
 
         await this.#exportMarkdown();
-      });
+      }, { signal: this.#eventAbortController?.signal });
     }
 
     const exportJsonBtn = this.element.querySelector("#batata-export-json-btn");
@@ -566,11 +589,12 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
         event.stopPropagation();
 
         await this.#exportJson();
-      });
+      }, { signal: this.#eventAbortController?.signal });
     }
   }
 
   #bindGranularControls() {
+    const signal = this.#eventAbortController?.signal;
     this.element.querySelectorAll("[data-feature]").forEach((el) => {
       el.addEventListener("change", (event) => {
         event.preventDefault();
@@ -585,7 +609,7 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
         }
 
         refitSoon(this);
-      });
+      }, { signal });
     });
 
     const resetGranularBtn = this.element.querySelector(
@@ -599,7 +623,7 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
 
         await resetGranular(this.#selectedLevel);
         this.render();
-      });
+      }, { signal });
     }
   }
 
@@ -620,7 +644,7 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
 
       this.#overrideConfirmed = true;
       submitBtn.click();
-    });
+    }, { signal: this.#eventAbortController?.signal });
   }
 
   #bindMonitorTick() {
@@ -634,6 +658,7 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
   }
 
   #bindProtocolImageFallbacks() {
+    const signal = this.#eventAbortController?.signal;
     this.element
       .querySelectorAll("[data-batata-protocol-image]")
       .forEach((img) => {
@@ -653,8 +678,8 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
         img.loading = "eager";
         img.decoding = "async";
 
-        img.addEventListener("error", markMissing, { once: true });
-        img.addEventListener("load", markLoaded, { once: true });
+        img.addEventListener("error", markMissing, { once: true, signal });
+        img.addEventListener("load", markLoaded, { once: true, signal });
 
         if (img.complete) {
           if (img.naturalWidth > 0) markLoaded();
@@ -680,7 +705,9 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
       avgEl.textContent = String(Math.round(metrics.avgFps));
     }
 
-    const liveCurrentFps = this.element.querySelector("[data-live-current-fps]");
+    const liveCurrentFps = this.element.querySelector(
+      "[data-live-current-fps]",
+    );
     const liveAvgFps = this.element.querySelector("[data-live-avg-fps]");
     const liveFrameMs = this.element.querySelector("[data-live-frame-ms]");
     const liveAvgFrame = this.element.querySelector("[data-live-avg-frame]");
@@ -695,7 +722,9 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
     }
 
     if (liveFrameMs && metrics.currentFrameMs !== null) {
-      liveFrameMs.textContent = String(Math.round(metrics.currentFrameMs * 100) / 100);
+      liveFrameMs.textContent = String(
+        Math.round(metrics.currentFrameMs * 100) / 100,
+      );
     }
 
     if (liveAvgFrame && metrics.currentFrameMs !== null) {
@@ -721,7 +750,9 @@ export class PotatoDialog extends foundry.applications.api.HandlebarsApplication
       frameGraph.innerHTML = graphs.frameSvg;
     }
 
-    const stutterGraph = this.element.querySelector("[data-live-stutter-graph]");
+    const stutterGraph = this.element.querySelector(
+      "[data-live-stutter-graph]",
+    );
     if (stutterGraph) {
       stutterGraph.innerHTML = graphs.qualitySvg;
     }

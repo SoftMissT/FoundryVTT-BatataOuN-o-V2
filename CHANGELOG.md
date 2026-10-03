@@ -14,6 +14,17 @@ This project follows the spirit of [Keep a Changelog](https://keepachangelog.com
 
 ---
 
+## [1.0.18] - 2026-10-03
+
+### Changed
+
+- Refined the diagnostic HUD visual system with container-aware responsive layout, stronger focus states, reduced paint scope and clearer panel depth.
+- Made ApplicationV2 event bindings abortable per render to prevent duplicate handlers during live HUD updates.
+- Added keyboard arrow navigation for the protocol radiogroup.
+- Changed live-monitor recovery logging to controlled debug output instead of repeated console warnings.
+
+---
+
 ## [1.0.17] - 2026-08-29
 
 ### Fixed

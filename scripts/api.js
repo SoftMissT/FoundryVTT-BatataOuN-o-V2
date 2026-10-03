@@ -101,8 +101,10 @@ export class PotatoOrNotAPI {
   resetFeatures(level) {
     resetGranular(level);
   }
-  async createBenchmarkJournal(benchmark = this.lastBenchmark, applySummary = null) {
+  async createBenchmarkJournal(
+    benchmark = this.lastBenchmark,
+    applySummary = null,
+  ) {
     return createBenchmarkJournalReport(benchmark, applySummary);
   }
-
 }

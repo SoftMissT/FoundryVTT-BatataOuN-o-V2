@@ -394,7 +394,6 @@ function measureFrameTimes(durationMs) {
   });
 }
 
-
 // ─── Samples para gráficos ──────────────────────────────────────
 
 function buildGraphSamples(frameTimes) {
@@ -428,7 +427,12 @@ function downsample(values, maxPoints) {
     const end = Math.min(values.length, Math.floor((i + 1) * bucketSize));
     const bucket = values.slice(start, Math.max(start + 1, end));
 
-    if (typeof bucket[0] === "number" && bucket.every((value) => value <= 2 && value >= 0 && Number.isInteger(value))) {
+    if (
+      typeof bucket[0] === "number" &&
+      bucket.every(
+        (value) => value <= 2 && value >= 0 && Number.isInteger(value),
+      )
+    ) {
       result.push(Math.max(...bucket));
     } else {
       result.push(round(average(bucket), 2));
